@@ -2,11 +2,11 @@ FLAGS=
 
 
 black:
-	black transformer tests setup.py
+	black time-series-experiments tests setup.py
 
 
 flake:
-	flake8 transformer tests setup.py
+	flake8 time-series-experiments tests setup.py
 
 
 test: flake
@@ -14,16 +14,16 @@ test: flake
 
 
 mypy:
-	mypy transformer --ignore-missing-imports --disallow-untyped-calls --no-site-packages --strict
+	mypy time-series-experiments --ignore-missing-imports --disallow-untyped-calls --no-site-packages --strict
 
 
 cov cover coverage: flake
-	py.test -s -v --cov-report term --cov-report html --cov transformer ./tests
+	py.test -s -v --cov-report term --cov-report html --cov time-series-experiments ./tests
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 
 cov_only: flake
-	py.test -s -v --cov-report term --cov-report html --cov transformer ./tests
+	py.test -s -v --cov-report term --cov-report html --cov time-series-experiments ./tests
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 
