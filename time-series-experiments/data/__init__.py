@@ -1,1 +1,0 @@
-from ._data import train_test_split_index

@@ -2,28 +2,24 @@ FLAGS=
 
 
 black:
-	black time-series-experiments tests setup.py
+	black time_series_experiments tests setup.py
 
 
-flake:
-	flake8 time-series-experiments tests setup.py
-
-
-test: flake
-	py.test -s -v $(FLAGS) ./tests/
+test:
+	py.test -s -vv $(FLAGS) ./tests/
 
 
 mypy:
-	mypy time-series-experiments --ignore-missing-imports --disallow-untyped-calls --no-site-packages --strict
+	mypy time_series_experiments --ignore-missing-imports --disallow-untyped-calls --no-site-packages --strict
 
 
 cov cover coverage: flake
-	py.test -s -v --cov-report term --cov-report html --cov time-series-experiments ./tests
+	py.test -s -v --cov-report term --cov-report html --cov time_series_experiments ./tests
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 
 cov_only: flake
-	py.test -s -v --cov-report term --cov-report html --cov time-series-experiments ./tests
+	py.test -s -v --cov-report term --cov-report html --cov time_series_experiments ./tests
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 

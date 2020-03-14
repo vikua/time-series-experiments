@@ -43,7 +43,7 @@ classifiers = [
 
 
 setup(
-    name="time-series-experiments",
+    name="time_series_experiments",
     version=read_version(),
     description=("time series experiments"),
     long_description=read("README.md"),

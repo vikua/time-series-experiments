@@ -6,7 +6,7 @@ import random
 import numpy as np
 import pandas as pd
 
-from data import train_test_split_index
+from utils import train_test_split_index
 
 
 def train(args):
