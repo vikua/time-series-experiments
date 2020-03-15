@@ -61,6 +61,8 @@ class MultiHeadAttention(keras.layers.Layer):
             trainable=True,
         )
 
+        super(MultiHeadAttention, self).build(input_shape)
+
     def scaled_dot_product_attention(self, q, k, v, mask):
         matmul_qk = tf.matmul(q, k, transpose_b=True)
 
@@ -114,3 +116,33 @@ class MultiHeadAttention(keras.layers.Layer):
             "temperature": self.temperature,
             "kernel_initializer": keras.initializers.serialize(self.kernel_initializer),
         }
+
+
+class PositionalEncoding(keras.layers.Layer):
+    def __init__(self, units, **kwargs):
+        super(PositionalEncoding, self).__init__(**kwargs)
+        self.units = units
+
+    def call(self, inputs, mask=None):
+        shape = tf.shape(inputs)
+        batch_size = shape[0]
+        seq_len = shape[1]
+
+        position_dims = tf.range(seq_len)[:, tf.newaxis]
+        input_dims = tf.range(self.units)[tf.newaxis, :]
+
+        angle_rates = 1 / tf.pow(
+            10000.0, tf.cast((2 * (input_dims // 2)) / self.units, tf.float32)
+        )
+        angle_rads = tf.cast(position_dims, tf.float32) * angle_rates
+
+        sines = tf.sin(angle_rads[:, 0::2])
+        cosines = tf.cos(angle_rads[:, 1::2])
+
+        pos_encoding = tf.concat([sines, cosines], axis=-1)
+        pos_encoding = pos_encoding[tf.newaxis, ...]
+        pos_encoding = tf.repeat(pos_encoding, batch_size, axis=0)
+        return pos_encoding
+
+    def get_config(self):
+        return {"units": self.units}
