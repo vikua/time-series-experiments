@@ -60,8 +60,10 @@ class TransformerEncoder(object):
         self.dropout1 = keras.layers.Dropout(dropout_rate)
         self.dropout2 = keras.layers.Dropout(dropout_rate)
 
-    def __call__(self, inputs, mask=None):
-        outputs, encoder_self_attention = self.mha([inputs, inputs, inputs], mask=mask)
+    def __call__(self, inputs, padding_mask=None):
+        outputs, encoder_self_attention = self.mha(
+            [inputs, inputs, inputs], mask=padding_mask
+        )
         outputs = self.dropout1(outputs)
         outputs = keras.layers.add([inputs, outputs])
         outputs = self.layernorm1(outputs)
@@ -110,14 +112,16 @@ class TransformerDecoder(object):
         self.dropout2 = keras.layers.Dropout(dropout_rate)
         self.dropout3 = keras.layers.Dropout(dropout_rate)
 
-    def __call__(self, inputs, encoder_outputs, mask=None):
-        outputs, decoder_self_attention = self.mha1([inputs, inputs, inputs], mask=mask)
+    def __call__(self, inputs, encoder_outputs, padding_mask=None, lookahead_mask=None):
+        outputs, decoder_self_attention = self.mha1(
+            [inputs, inputs, inputs], mask=lookahead_mask
+        )
         outputs = self.dropout1(outputs)
         outputs = keras.layers.add([inputs, outputs])
         outputs = self.layernorm1(outputs)
 
         mha2_outputs, encoder_decoder_attention = self.mha2(
-            [outputs, encoder_outputs, encoder_outputs]
+            [outputs, encoder_outputs, encoder_outputs], mask=padding_mask
         )
         mha2_outputs = self.dropout2(mha2_outputs)
         outputs = keras.layers.add([outputs, mha2_outputs])

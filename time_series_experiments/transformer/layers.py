@@ -74,7 +74,7 @@ class MultiHeadAttention(keras.layers.Layer):
         scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
 
         if mask is not None:
-            scaled_attention_logits += mask * -1e9
+            scaled_attention_logits += (1 - mask) * -1e9
 
         attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
         output = tf.matmul(attention_weights, v)
@@ -123,7 +123,7 @@ class PositionalEncoding(keras.layers.Layer):
         super(PositionalEncoding, self).__init__(**kwargs)
         self.units = units
 
-    def call(self, inputs, mask=None):
+    def call(self, inputs):
         shape = tf.shape(inputs)
         batch_size = shape[0]
         seq_len = shape[1]
@@ -146,3 +146,16 @@ class PositionalEncoding(keras.layers.Layer):
 
     def get_config(self):
         return {"units": self.units}
+
+
+class PaddingLookAheadMask(keras.layers.Layer):
+    def call(self, inputs):
+        size = tf.shape(inputs)[1]
+
+        look_ahead_mask = tf.linalg.band_part(tf.ones((size, size)), -1, 0)
+
+        # padding mask is not used yets, so just generating ones
+        padding_mask = tf.cast(tf.ones(tf.shape(inputs)[0:2]), tf.float32)
+        padding_mask = padding_mask[:, tf.newaxis, tf.newaxis, :]
+
+        return tf.minimum(look_ahead_mask, padding_mask)
