@@ -10,6 +10,7 @@ from time_series_experiments.transformer.modules import (
     TransformerEncoderLayer,
     TransformerDecoderLayer,
     TransformerEncoder,
+    TransformerDecoder,
 )
 from time_series_experiments.transformer.layers import (
     PositionalEncoding,
@@ -308,3 +309,60 @@ def test_transformer_encoder():
     assert np.all(np.isfinite(y_pred))
     error = rmse(y_pred, y_test)
     assert error < 3.0
+
+
+def test_transformer_decoder():
+    fdw = 28
+    fw = 7
+    attention_dim = 32
+    num_heads = 4
+
+    x_train, y_train, x_test, y_test = simple_seq_data(
+        nrows=1000, freq="1H", fdw=fdw, fw=fw, test_size=0.2
+    )
+    decoder_inputs_train = create_decoder_inputs(y_train)
+
+    inputs = keras.Input(shape=(fdw, 1))
+    targets = keras.Input(shape=(fw, 1))
+
+    padding_mask = AllOnesPaddingMask()(inputs)
+    lookahead_mask = PaddingLookAheadMask()(targets)
+
+    outputs, encoder_self_attention = TransformerEncoder(
+        num_layers=2,
+        attention_dim=attention_dim,
+        num_heads=num_heads,
+        linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+    )(inputs, padding_mask=padding_mask)
+
+    outputs, decoder_weights, encoder_decoder_weights = TransformerDecoder(
+        num_layers=2,
+        attention_dim=attention_dim,
+        num_heads=num_heads,
+        linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+    )(targets, outputs, padding_mask=padding_mask, lookahead_mask=lookahead_mask)
+
+    outputs = keras.layers.Dense(
+        1,
+        kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        activation="linear",
+    )(outputs)
+    model = keras.Model(inputs=[inputs, targets], outputs=outputs)
+
+    model.compile(
+        optimizer=keras.optimizers.Adam(0.01), loss=keras.losses.MeanSquaredError()
+    )
+
+    model.fit(
+        [x_train, decoder_inputs_train], y_train, epochs=5, batch_size=32, shuffle=False
+    )
+
+    decoder_inputs_test = create_decoder_inputs(y_test)
+    y_pred = model.predict([x_test, decoder_inputs_test])
+    assert np.all(np.isfinite(y_pred))
+    error = rmse(np.squeeze(y_pred), y_test)
+    assert error < 2.0

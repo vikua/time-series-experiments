@@ -173,7 +173,7 @@ class TransformerEncoder(object):
             for i in range(self.num_layers)
         ]
 
-    def __call__(self, inputs):
+    def __call__(self, inputs, padding_mask=None):
         outputs = self.linear(inputs)
         pos_enc = self.pos_encoding(outputs)
         outputs = keras.layers.add([outputs, pos_enc])
@@ -181,7 +181,65 @@ class TransformerEncoder(object):
         attention_weighs = {}
 
         for i in range(self.num_layers):
-            outputs, weights = self.encoder_layers[i](outputs)
+            outputs, weights = self.encoder_layers[i](
+                outputs, padding_mask=padding_mask
+            )
             attention_weighs["enc_layer_{}".format(i)] = weights
 
         return outputs, attention_weighs
+
+
+class TransformerDecoder(object):
+    def __init__(
+        self,
+        num_layers,
+        attention_dim,
+        num_heads,
+        dff=None,
+        linear_kernel_initializer="glorot_uniform",
+        attention_kernel_initializer="glorot_uniform",
+        pwffn_kernel_initializer="glorot_uniform",
+        layer_norm_epsilon=0.001,
+        dropout_rate=0.0,
+    ):
+        self.num_layers = num_layers
+
+        self.linear = keras.layers.Dense(
+            attention_dim * num_heads,
+            kernel_initializer=linear_kernel_initializer,
+            activation=None,
+        )
+        self.pos_encoding = PositionalEncoding(attention_dim * num_heads)
+
+        self.decoder_layers = [
+            TransformerDecoderLayer(
+                attention_dim,
+                num_heads,
+                dff,
+                attention_kernel_initializer,
+                pwffn_kernel_initializer,
+                layer_norm_epsilon,
+                dropout_rate,
+            )
+            for i in range(self.num_layers)
+        ]
+
+    def __call__(self, inputs, encoder_outputs, padding_mask=None, lookahead_mask=None):
+        outputs = self.linear(inputs)
+        pos_enc = self.pos_encoding(outputs)
+        outputs = keras.layers.add([outputs, pos_enc])
+
+        dec_attention_weights = {}
+        enc_dec_attention_weights = {}
+
+        for i in range(self.num_layers):
+            outputs, dec_weights, enc_dec_weights = self.decoder_layers[i](
+                outputs,
+                encoder_outputs,
+                padding_mask=padding_mask,
+                lookahead_mask=lookahead_mask,
+            )
+            dec_attention_weights["dec_layer_{}".format(i)] = dec_weights
+            enc_dec_attention_weights["enc_dec_layer_{}".format(i)] = enc_dec_weights
+
+        return outputs, dec_attention_weights, enc_dec_attention_weights
