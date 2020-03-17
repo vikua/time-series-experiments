@@ -9,6 +9,7 @@ from time_series_experiments.transformer.modules import (
     PositionWiseFeedForwardNetwork,
     TransformerEncoderLayer,
     TransformerDecoderLayer,
+    TransformerEncoder,
 )
 from time_series_experiments.transformer.layers import (
     PositionalEncoding,
@@ -170,12 +171,18 @@ def test_transformer_decoder_layer():
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
     )(inputs)
 
-    outputs, decoder_self_attention, encoder_decoder_attention = TransformerDecoderLayer(
+    (
+        outputs,
+        decoder_self_attention,
+        encoder_decoder_attention,
+    ) = TransformerDecoderLayer(
         attention_dim=attention_dim,
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
-    )(targets, outputs)
+    )(
+        targets, outputs
+    )
 
     outputs = keras.layers.Flatten()(outputs)
     outputs = keras.layers.Dense(
@@ -224,12 +231,18 @@ def test_transformer_decoder_layer_masking():
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
     )(inputs, padding_mask=padding_mask)
 
-    outputs, decoder_self_attention, encoder_decoder_attention = TransformerDecoderLayer(
+    (
+        outputs,
+        decoder_self_attention,
+        encoder_decoder_attention,
+    ) = TransformerDecoderLayer(
         attention_dim=attention_dim,
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
-    )(targets, outputs, padding_mask=padding_mask, lookahead_mask=lookahead_mask)
+    )(
+        targets, outputs, padding_mask=padding_mask, lookahead_mask=lookahead_mask
+    )
 
     outputs = keras.layers.Flatten()(outputs)
     outputs = keras.layers.Dense(
@@ -254,3 +267,44 @@ def test_transformer_decoder_layer_masking():
     assert np.all(np.isfinite(y_pred))
     error = rmse(y_pred, y_test)
     assert error < 2.0
+
+
+def test_transformer_encoder():
+    fdw = 28
+    fw = 7
+    attention_dim = 32
+    num_heads = 4
+
+    x_train, y_train, x_test, y_test = simple_seq_data(
+        nrows=1000, freq="1H", fdw=fdw, fw=fw, test_size=0.2
+    )
+
+    inputs = keras.Input(shape=(fdw, 1))
+
+    outputs, encoder_self_attention = TransformerEncoder(
+        num_layers=2,
+        attention_dim=attention_dim,
+        num_heads=num_heads,
+        linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+    )(inputs)
+
+    outputs = keras.layers.Flatten()(outputs)
+    outputs = keras.layers.Dense(
+        fw,
+        kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        activation="linear",
+    )(outputs)
+    model = keras.Model(inputs=inputs, outputs=outputs)
+
+    model.compile(
+        optimizer=keras.optimizers.Adam(0.01), loss=keras.losses.MeanSquaredError()
+    )
+
+    model.fit(x_train, y_train, epochs=5, batch_size=32, shuffle=False)
+
+    y_pred = model.predict(x_test)
+    assert np.all(np.isfinite(y_pred))
+    error = rmse(y_pred, y_test)
+    assert error < 3.0

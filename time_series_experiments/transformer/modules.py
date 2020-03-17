@@ -1,6 +1,9 @@
 from tensorflow import keras
 
-from .layers import MultiHeadAttention
+from .layers import (
+    MultiHeadAttention,
+    PositionalEncoding,
+)
 
 
 class PositionWiseFeedForwardNetwork(object):
@@ -133,3 +136,52 @@ class TransformerDecoderLayer(object):
         outputs = self.layernorm3(outputs)
 
         return outputs, decoder_self_attention, encoder_decoder_attention
+
+
+class TransformerEncoder(object):
+    def __init__(
+        self,
+        num_layers,
+        attention_dim,
+        num_heads,
+        dff=None,
+        linear_kernel_initializer="glorot_uniform",
+        attention_kernel_initializer="glorot_uniform",
+        pwffn_kernel_initializer="glorot_uniform",
+        layer_norm_epsilon=0.001,
+        dropout_rate=0.0,
+    ):
+        self.num_layers = num_layers
+
+        self.linear = keras.layers.Dense(
+            attention_dim * num_heads,
+            kernel_initializer=linear_kernel_initializer,
+            activation=None,
+        )
+        self.pos_encoding = PositionalEncoding(attention_dim * num_heads)
+
+        self.encoder_layers = [
+            TransformerEncoderLayer(
+                attention_dim,
+                num_heads,
+                dff,
+                attention_kernel_initializer,
+                pwffn_kernel_initializer,
+                layer_norm_epsilon,
+                dropout_rate,
+            )
+            for i in range(self.num_layers)
+        ]
+
+    def __call__(self, inputs):
+        outputs = self.linear(inputs)
+        pos_enc = self.pos_encoding(outputs)
+        outputs = keras.layers.add([outputs, pos_enc])
+
+        attention_weighs = {}
+
+        for i in range(self.num_layers):
+            outputs, weights = self.encoder_layers[i](outputs)
+            attention_weighs["enc_layer_{}".format(i)] = weights
+
+        return outputs, attention_weighs
