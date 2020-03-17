@@ -7,8 +7,8 @@ from tensorflow import keras
 
 from time_series_experiments.transformer.modules import (
     PositionWiseFeedForwardNetwork,
-    TransformerEncoder,
-    TransformerDecoder,
+    TransformerEncoderLayer,
+    TransformerDecoderLayer,
 )
 from time_series_experiments.transformer.layers import (
     PositionalEncoding,
@@ -74,7 +74,7 @@ def test_position_wise_ffnn():
     assert error < 0.5
 
 
-def test_transformer_encoder():
+def test_transformer_encoder_layer():
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -85,7 +85,7 @@ def test_transformer_encoder():
     )
 
     inputs = keras.Input(shape=(fdw, 1))
-    outputs, encoder_self_attention = TransformerEncoder(
+    outputs, encoder_self_attention = TransformerEncoderLayer(
         attention_dim=attention_dim,
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
@@ -111,7 +111,7 @@ def test_transformer_encoder():
     assert error < 2.0
 
 
-def test_transformer_encoder_masking():
+def test_transformer_encoder_layer_masking():
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -123,7 +123,7 @@ def test_transformer_encoder_masking():
 
     inputs = keras.Input(shape=(fdw, 1))
     padding_mask = AllOnesPaddingMask()(inputs)
-    outputs, encoder_self_attention = TransformerEncoder(
+    outputs, encoder_self_attention = TransformerEncoderLayer(
         attention_dim=attention_dim,
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
@@ -149,7 +149,7 @@ def test_transformer_encoder_masking():
     assert error < 2.0
 
 
-def test_transformer_decoder():
+def test_transformer_decoder_layer():
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -163,14 +163,14 @@ def test_transformer_decoder():
     inputs = keras.Input(shape=(fdw, 1))
     targets = keras.Input(shape=(fw, 1))
 
-    outputs, encoder_self_attention = TransformerEncoder(
+    outputs, encoder_self_attention = TransformerEncoderLayer(
         attention_dim=attention_dim,
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
     )(inputs)
 
-    outputs, decoder_self_attention, encoder_decoder_attention = TransformerDecoder(
+    outputs, decoder_self_attention, encoder_decoder_attention = TransformerDecoderLayer(
         attention_dim=attention_dim,
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
@@ -200,7 +200,7 @@ def test_transformer_decoder():
     assert error < 2.0
 
 
-def test_transformer_decoder_masking():
+def test_transformer_decoder_layer_masking():
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -217,14 +217,14 @@ def test_transformer_decoder_masking():
     padding_mask = AllOnesPaddingMask()(inputs)
     lookahead_mask = PaddingLookAheadMask()(targets)
 
-    outputs, encoder_self_attention = TransformerEncoder(
+    outputs, encoder_self_attention = TransformerEncoderLayer(
         attention_dim=attention_dim,
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
     )(inputs, padding_mask=padding_mask)
 
-    outputs, decoder_self_attention, encoder_decoder_attention = TransformerDecoder(
+    outputs, decoder_self_attention, encoder_decoder_attention = TransformerDecoderLayer(
         attention_dim=attention_dim,
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),

@@ -31,7 +31,7 @@ class PositionWiseFeedForwardNetwork(object):
         return outputs
 
 
-class TransformerEncoder(object):
+class TransformerEncoderLayer(object):
     def __init__(
         self,
         attention_dim,
@@ -76,7 +76,7 @@ class TransformerEncoder(object):
         return outputs, encoder_self_attention
 
 
-class TransformerDecoder(object):
+class TransformerDecoderLayer(object):
     def __init__(
         self,
         attention_dim,
