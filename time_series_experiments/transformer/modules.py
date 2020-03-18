@@ -125,7 +125,8 @@ class TransformerDecoderLayer(object):
         outputs = self.layernorm1(outputs)
 
         mha2_outputs, encoder_decoder_attention = self.mha2(
-            [outputs, encoder_outputs, encoder_outputs], mask=padding_mask
+            [outputs, encoder_outputs, encoder_outputs],
+            mask=padding_mask
             # [encoder_outputs, encoder_outputs, outputs], mask=padding_mask
         )
         mha2_outputs = self.dropout2(mha2_outputs)
@@ -253,3 +254,61 @@ class TransformerDecoder(object):
             enc_dec_attention_weights["enc_dec_layer_{}".format(i)] = enc_dec_weights
 
         return outputs, dec_attention_weights, enc_dec_attention_weights
+
+
+class Transformer(object):
+    def __init__(
+        self,
+        num_layers,
+        attention_dim,
+        num_heads,
+        dff=None,
+        linear_kernel_initializer="glorot_uniform",
+        attention_kernel_initializer="glorot_uniform",
+        pwffn_kernel_initializer="glorot_uniform",
+        output_kernel_initializer="glorot_uniform",
+        layer_norm_epsilon=0.001,
+        dropout_rate=0.0,
+    ):
+        self.lookahead_mask = PaddingLookAheadMask()
+
+        self.encoder = TransformerEncoder(
+            num_layers,
+            attention_dim,
+            num_heads,
+            dff,
+            linear_kernel_initializer,
+            attention_kernel_initializer,
+            pwffn_kernel_initializer,
+            layer_norm_epsilon,
+            dropout_rate,
+        )
+
+        self.decoder = TransformerDecoder(
+            num_layers,
+            attention_dim,
+            num_heads,
+            dff,
+            linear_kernel_initializer,
+            attention_kernel_initializer,
+            pwffn_kernel_initializer,
+            layer_norm_epsilon,
+            dropout_rate,
+        )
+
+        self.output_layer = keras.layers.Dense(
+            1, kernel_initializer=output_kernel_initializer, activation="linear",
+        )
+
+    def __call__(self, inputs, targets):
+        lookahead_mask = self.lookahead_mask(targets)
+
+        enc_output, enc_attention = self.encoder(inputs)
+
+        dec_output, dec_attention, enc_dec_attention = self.decoder(
+            targets, enc_output, lookahead_mask=lookahead_mask
+        )
+
+        outputs = self.output_layer(dec_output)
+
+        return outputs, enc_attention, dec_attention, enc_dec_attention
