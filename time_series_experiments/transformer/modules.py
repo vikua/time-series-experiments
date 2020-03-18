@@ -126,6 +126,7 @@ class TransformerDecoderLayer(object):
 
         mha2_outputs, encoder_decoder_attention = self.mha2(
             [outputs, encoder_outputs, encoder_outputs], mask=padding_mask
+            # [encoder_outputs, encoder_outputs, outputs], mask=padding_mask
         )
         mha2_outputs = self.dropout2(mha2_outputs)
         outputs = keras.layers.add([outputs, mha2_outputs])
@@ -174,10 +175,14 @@ class TransformerEncoder(object):
             for i in range(self.num_layers)
         ]
 
+        self.dropout = keras.layers.Dropout(dropout_rate)
+
     def __call__(self, inputs, padding_mask=None):
         outputs = self.linear(inputs)
         pos_enc = self.pos_encoding(outputs)
         outputs = keras.layers.add([outputs, pos_enc])
+
+        outputs = self.dropout(outputs)
 
         attention_weighs = {}
 
@@ -225,10 +230,14 @@ class TransformerDecoder(object):
             for i in range(self.num_layers)
         ]
 
+        self.dropout = keras.layers.Dropout(dropout_rate)
+
     def __call__(self, inputs, encoder_outputs, padding_mask=None, lookahead_mask=None):
         outputs = self.linear(inputs)
         pos_enc = self.pos_encoding(outputs)
         outputs = keras.layers.add([outputs, pos_enc])
+
+        outputs = self.dropout(outputs)
 
         dec_attention_weights = {}
         enc_dec_attention_weights = {}

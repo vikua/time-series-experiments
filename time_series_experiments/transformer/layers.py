@@ -123,7 +123,9 @@ class MultiHeadAttention(keras.layers.Layer):
 
         x, attention_weights = self.scaled_dot_product_attention(q, k, v, mask)
 
+        # transpose into (b, seq_len, num_heads, attention_dim)
         x = tf.transpose(x, perm=(0, 2, 1, 3))
+        # rehsape into (b, seq_len, attention_dim * num_heads)
         x = tf.reshape(
             x, shape=(tf.shape(x)[0], self.seq_len, self.attention_dim * self.num_heads)
         )
