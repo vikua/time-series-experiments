@@ -3,6 +3,7 @@ from tensorflow import keras
 from .layers import (
     MultiHeadAttention,
     PositionalEncoding,
+    PaddingLookAheadMask,
 )
 
 

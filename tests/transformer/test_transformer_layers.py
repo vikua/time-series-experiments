@@ -39,6 +39,49 @@ def _positional_encoding_reference(seq_len, dims):
     return table
 
 
+def test_scaled_dot_product_attention():
+    mha = MultiHeadAttention(32, 4)
+
+    temp_q = tf.constant([[0, 10, 0]], dtype=tf.float32)
+
+    temp_k = tf.constant(
+        [[10, 0, 0], [0, 10, 0], [0, 0, 10], [0, 0, 10]], dtype=tf.float32
+    )
+
+    temp_v = tf.constant([[1, 0], [10, 0], [100, 5], [1000, 6]], dtype=tf.float32)
+
+    outputs, weights = mha.scaled_dot_product_attention(temp_q, temp_k, temp_v, None)
+    assert np.all(np.isclose(outputs, np.array([10.0, 0.0],), atol=1e-6))
+    assert np.all(np.isclose(weights, np.array([0.0, 1.0, 0.0, 0.0],), atol=1e-5))
+
+    temp_q = tf.constant([[0, 0, 10]], dtype=tf.float32)
+    outputs, weights = mha.scaled_dot_product_attention(temp_q, temp_k, temp_v, None)
+    assert np.all(np.isclose(outputs, np.array([550.0, 5.5],), atol=1e-6))
+    assert np.all(np.isclose(weights, np.array([0.0, 0.0, 0.5, 0.5],), atol=1e-5))
+
+    temp_q = tf.constant([[10, 10, 0]], dtype=tf.float32)
+    outputs, weights = mha.scaled_dot_product_attention(temp_q, temp_k, temp_v, None)
+    assert np.all(np.isclose(outputs, np.array([5.5, 0.0],), atol=1e-6))
+    assert np.all(np.isclose(weights, np.array([0.5, 0.5, 0.0, 0.0],), atol=1e-5))
+
+    temp_q = tf.constant([[0, 0, 10], [0, 10, 0], [10, 10, 0]], dtype=tf.float32)
+    outputs, weights = mha.scaled_dot_product_attention(temp_q, temp_k, temp_v, None)
+    assert np.all(
+        np.isclose(
+            outputs, np.array([[550.0, 5.5], [10.0, 0.0], [5.5, 0.0]]), atol=1e-6
+        )
+    )
+    assert np.all(
+        np.isclose(
+            weights,
+            np.array(
+                [[0.0, 0.0, 0.5, 0.5], [0.0, 1.0, 0.0, 0.0], [0.5, 0.5, 0.0, 0.0]]
+            ),
+            atol=1e-5,
+        )
+    )
+
+
 def test_multi_head_attention():
     fdw = 28
     fw = 7

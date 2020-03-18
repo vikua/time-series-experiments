@@ -64,6 +64,27 @@ class MultiHeadAttention(keras.layers.Layer):
         super(MultiHeadAttention, self).build(input_shape)
 
     def scaled_dot_product_attention(self, q, k, v, mask):
+        """ Calculate the attention weights.
+        q, k, v must have matching leading dimensions.
+        k, v must have matching penultimate dimension, i.e.: seq_len_k = seq_len_v.
+        The mask has different shapes depending on its type(padding or look ahead)
+        but it must be broadcastable for addition.
+
+        Parameters
+        ----------
+        q: tf.Tensor
+            query shape == (..., seq_len_q, depth)
+        k: tf.Tensor
+            key shape == (..., seq_len_k, depth)
+        v: tf.Tensor
+            value shape == (..., seq_len_v, depth_v)
+        mask: tf.Tensor or None
+            Float tensor with shape broadcastable to (..., seq_len_q, seq_len_k). Defaults to None.
+
+        Returns
+        -------
+            output, attention_weights
+        """
         matmul_qk = tf.matmul(q, k, transpose_b=True)
 
         temperature = self.temperature
@@ -71,7 +92,7 @@ class MultiHeadAttention(keras.layers.Layer):
             dk = tf.cast(tf.shape(k)[-1], tf.float32)
             temperature = tf.math.sqrt(dk)
 
-        scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
+        scaled_attention_logits = matmul_qk / temperature
 
         if mask is not None:
             scaled_attention_logits += (1 - mask) * -1e9
