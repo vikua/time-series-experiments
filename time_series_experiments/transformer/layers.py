@@ -20,7 +20,6 @@ class MultiHeadAttention(keras.layers.Layer):
         self.kernel_initializer = kernel_initializer
 
         self.input_dim = None
-        self.seq_len = None
 
         self.W_Q = None
         self.W_K = None
@@ -28,7 +27,7 @@ class MultiHeadAttention(keras.layers.Layer):
         self.W_O = None
 
     def build(self, input_shape):
-        _, self.seq_len, self.input_dim = input_shape[0]
+        _, _, self.input_dim = input_shape[0]
 
         self.W_Q = self.add_weight(
             name="w_q",
@@ -127,7 +126,8 @@ class MultiHeadAttention(keras.layers.Layer):
         x = tf.transpose(x, perm=(0, 2, 1, 3))
         # rehsape into (b, seq_len, attention_dim * num_heads)
         x = tf.reshape(
-            x, shape=(tf.shape(x)[0], self.seq_len, self.attention_dim * self.num_heads)
+            x,
+            shape=(tf.shape(x)[0], tf.shape(x)[1], self.attention_dim * self.num_heads),
         )
         x = tf.matmul(x, self.W_O)
         return x, attention_weights
