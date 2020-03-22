@@ -1,1 +1,1 @@
-from .models import TimeSeriesTransformer
+from .models import Transformer

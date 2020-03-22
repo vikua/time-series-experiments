@@ -11,7 +11,6 @@ from time_series_experiments.transformer.modules import (
     TransformerDecoderLayer,
     TransformerEncoder,
     TransformerDecoder,
-    Transformer,
 )
 from time_series_experiments.transformer.layers import (
     PositionalEncoding,
@@ -38,6 +37,64 @@ class AllOnesPaddingMask(keras.layers.Layer):
         padding_mask = tf.cast(tf.ones(tf.shape(inputs)[0:2]), tf.float32)
         padding_mask = padding_mask[:, tf.newaxis, tf.newaxis, :]
         return padding_mask
+
+
+class TestTransformer(object):
+    def __init__(
+        self,
+        num_layers,
+        attention_dim,
+        num_heads,
+        dff=None,
+        linear_kernel_initializer="glorot_uniform",
+        attention_kernel_initializer="glorot_uniform",
+        pwffn_kernel_initializer="glorot_uniform",
+        output_kernel_initializer="glorot_uniform",
+        layer_norm_epsilon=0.001,
+        dropout_rate=0.0,
+    ):
+        self.lookahead_mask = PaddingLookAheadMask()
+
+        self.encoder = TransformerEncoder(
+            num_layers,
+            attention_dim,
+            num_heads,
+            dff,
+            linear_kernel_initializer,
+            attention_kernel_initializer,
+            pwffn_kernel_initializer,
+            layer_norm_epsilon,
+            dropout_rate,
+        )
+
+        self.decoder = TransformerDecoder(
+            num_layers,
+            attention_dim,
+            num_heads,
+            dff,
+            linear_kernel_initializer,
+            attention_kernel_initializer,
+            pwffn_kernel_initializer,
+            layer_norm_epsilon,
+            dropout_rate,
+        )
+
+        self.output_layer = keras.layers.Dense(
+            1, kernel_initializer=output_kernel_initializer, activation="linear",
+        )
+
+    def __call__(self, inputs, targets):
+        lookahead_mask = self.lookahead_mask(targets)
+
+        enc_output, enc_attention = self.encoder(inputs)
+
+        dec_output, dec_attention, enc_dec_attention = self.decoder(
+            targets, enc_output, lookahead_mask=lookahead_mask
+        )
+
+        outputs = self.output_layer(dec_output)
+
+        return outputs, enc_attention, dec_attention, enc_dec_attention
 
 
 def test_position_wise_ffnn():
@@ -383,7 +440,7 @@ def test_transformer():
     inputs = keras.Input(shape=(fdw, 1))
     targets = keras.Input(shape=(fw, 1))
 
-    outputs, enc_attention, dec_attention, enc_dec_attention = Transformer(
+    outputs, enc_attention, dec_attention, enc_dec_attention = TestTransformer(
         num_layers=1,
         attention_dim=attention_dim,
         num_heads=num_heads,
@@ -426,7 +483,7 @@ def test_transformer_model_predictions():
     inputs = keras.Input(shape=(fdw, 1))
     targets = keras.Input(shape=(None, 1))
 
-    outputs, enc_attention, dec_attention, enc_dec_attention = Transformer(
+    outputs, enc_attention, dec_attention, enc_dec_attention = TestTransformer(
         num_layers=1,
         attention_dim=attention_dim,
         num_heads=num_heads,

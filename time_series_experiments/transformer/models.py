@@ -1,11 +1,12 @@
 import numpy as np
 from tensorflow import keras
 
-from .modules import Transformer
+from .modules import TransformerEncoder, TransformerDecoder
+from .layers import PaddingLookAheadMask
 from ..utils import create_decoder_inputs
 
 
-class TimeSeriesTransformer(object):
+class Transformer(object):
     def __init__(
         self,
         num_layers,
@@ -51,13 +52,12 @@ class TimeSeriesTransformer(object):
     def build_model(self):
         inputs = keras.Input(shape=(self.fwd, self.input_dim), name="inputs")
         targets = keras.Input(shape=(None, self.output_dim), name="targets")
+        encoder_outputs_inputs = keras.Input(
+            shape=(self.fdw, self.attention_dim * self.num_heads),
+            name="encoder_outputs_inputs",
+        )
 
-        (
-            outputs,
-            encoder_attention,
-            decoder_attention,
-            encoder_decoder_attention,
-        ) = Transformer(
+        encoder_outputs, encoder_attention = TransformerEncoder(
             num_layers=self.num_layers,
             attention_dim=self.attention_dim,
             num_heads=self.num_heads,
@@ -65,26 +65,57 @@ class TimeSeriesTransformer(object):
             linear_kernel_initializer=self.linear_kernel_initializer,
             attention_kernel_initializer=self.attention_kernel_initializer,
             pwffn_kernel_initializer=self.pwffn_kernel_initializer,
-            output_kernel_initializer=self.output_kernel_initializer,
             layer_norm_epsilon=self.layer_norm_epsilon,
             dropout_rate=self.dropout_rate,
-        )(
-            inputs, targets
+        )(inputs)
+
+        lookahead_mask = PaddingLookAheadMask()(targets)
+
+        decoder = TransformerDecoder(
+            num_layers=self.num_layers,
+            attention_dim=self.attention_dim,
+            num_heads=self.num_heads,
+            dff=self.dff,
+            linear_kernel_initializer=self.linear_kernel_initializer,
+            attention_kernel_initializer=self.attention_kernel_initializer,
+            pwffn_kernel_initializer=self.pwffn_kernel_initializer,
+            layer_norm_epsilon=self.layer_norm_epsilon,
+            dropout_rate=self.dropout_rate,
+        )
+        outputs, _, _ = decoder(targets, encoder_outputs, lookahead_mask=lookahead_mask)
+
+        final_layer = keras.layers.Dense(
+            self.output_dim,
+            kernel_initializer=self.output_kernel_initializer,
+            activation="linear",
+        )
+        outputs = final_layer(outputs)
+
+        self.model = keras.Model(inputs=[inputs, targets], outputs=outputs)
+        self.encoder_model = keras.Model(
+            inputs=inputs, outputs=[encoder_outputs, encoder_attention]
         )
 
-        return keras.Model(inputs=[inputs, targets], outputs=outputs,)
+        outputs, decoder_attention, encoder_decoder_attention = decoder(
+            targets, encoder_outputs_inputs, lookahead_mask=lookahead_mask
+        )
+        outputs = final_layer(outputs)
+        self.decoder_model = keras.Model(
+            inputs=[encoder_outputs_inputs, targets],
+            outputs=[outputs, decoder_attention, encoder_decoder_attention],
+        )
 
     def fit(self, X, y, verbose=0):
         self.fdw, self.input_dim = X.shape[1], X.shape[2]
         self.fw = y.shape[1]
         self.output_dim = 1
 
-        self.model = self.build_model()
+        self.build_model()
         self.model.compile(optimizer=self.optimizer, loss=self.loss)
 
         decoder_inputs = create_decoder_inputs(y, go_token=self.go_token)
 
-        self.model.fit(
+        return self.model.fit(
             [X, decoder_inputs],
             y,
             epochs=self.epochs,
@@ -95,13 +126,24 @@ class TimeSeriesTransformer(object):
 
     def predict(self, X):
         y_pred = np.empty((X.shape[0], self.fw,))
-        decoder_inputs = np.full((X.shape[0], 1, 1), self.go_token)
+        decoder_inputs = np.full((X.shape[0], 1, 1), self.go_token, dtype=np.float)
 
+        encoder_outputs, encoder_attention = self.encoder_model.predict(X)
         for step in range(self.fw):
-            pred = self.model.predict([X, decoder_inputs])
+            (
+                pred,
+                decoder_attention,
+                decoder_encoder_attention,
+            ) = self.decoder_model.predict([encoder_outputs, decoder_inputs])
             last_pred = pred[:, -1, :]
             y_pred[:, step] = last_pred.ravel()
             decoder_inputs = np.concatenate(
                 [decoder_inputs, np.expand_dims(last_pred, 1)], axis=1
             )
-        return y_pred
+
+        weights = {
+            "encoder_attention": encoder_attention,
+            "decoder_attention": decoder_attention,
+            "decoder_encoder_attention": decoder_encoder_attention,
+        }
+        return y_pred, weights

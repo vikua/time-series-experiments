@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from time_series_experiments.transformer import TimeSeriesTransformer
+from time_series_experiments.transformer import Transformer
 from time_series_experiments.utils import get_initializer
 from time_series_experiments.utils import rmse
 from ..conftest import simple_seq_data, RANDOM_SEED
@@ -27,7 +27,7 @@ def test_transformer():
         nrows=1000, freq="1H", fdw=fdw, fw=fw, test_size=0.2
     )
 
-    transformer = TimeSeriesTransformer(
+    transformer = Transformer(
         num_layers=1,
         attention_dim=32,
         num_heads=4,
@@ -41,5 +41,5 @@ def test_transformer():
     )
 
     transformer.fit(x_train, y_train, verbose=1)
-    y_pred = transformer.predict(x_test)
+    y_pred, _ = transformer.predict(x_test)
     assert rmse(y_pred, y_test) < 1.0
