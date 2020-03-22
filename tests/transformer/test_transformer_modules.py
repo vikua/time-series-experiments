@@ -441,9 +441,7 @@ def test_transformer_model_predictions():
     model = keras.Model(inputs=[inputs, targets], outputs=outputs)
 
     model.compile(
-        optimizer=keras.optimizers.Adam(0.001),
-        loss=keras.losses.MeanSquaredError(),
-        run_eagerly=True,
+        optimizer=keras.optimizers.Adam(0.001), loss=keras.losses.MeanSquaredError(),
     )
 
     model.fit(
