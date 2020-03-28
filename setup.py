@@ -14,20 +14,29 @@ def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
 
 
-install_requires = ["Keras==2.3.0", "tensorflow==1.15.2"]
+def read_requirements(fname):
+    with open(fname) as requirements_file:
+        reqs = requirements_file.read().split('\n')
+        requirements_w_version = [r.split(';') for r in reqs]
+        reqs = [r[0] for r in requirements_w_version if len(r) == 1 or '>' in r[1]]
+        return [
+            x for x in reqs if x.strip() != '' and not x.startswith('-') and not x.startswith('#')
+        ]
+
+requirements = read_requirements('requirements.txt')
 extras_require = {}
 
 
 def read_version():
     regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
-    init_py = os.path.join(os.path.dirname(__file__), "mung", "__init__.py")
+    init_py = os.path.join(os.path.dirname(__file__), "time_series_experiments", "__init__.py")
     with open(init_py) as f:
         for line in f:
             match = regexp.match(line)
             if match is not None:
                 return match.group(1)
         else:
-            msg = "Cannot find version in mung/__init__.py"
+            msg = "Cannot find version in time_series_experiments/__init__.py"
             raise RuntimeError(msg)
 
 
@@ -47,7 +56,6 @@ setup(
     version=read_version(),
     description=("time series experiments"),
     long_description=read("README.md"),
-    install_requires=install_requires,
     classifiers=classifiers,
     platforms=["POSIX"],
     author="Viktor Kovryzhkin",
@@ -56,6 +64,8 @@ setup(
     download_url="",
     license="MIT",
     packages=find_packages(),
+    install_requires=requirements,
+    tests_require=requirements,
     extras_require=extras_require,
     keywords=[
         "machine learning",
