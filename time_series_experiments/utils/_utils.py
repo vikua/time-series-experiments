@@ -18,3 +18,9 @@ def get_initializer(name, seed):
         return keras.initializers.get(name)
     else:
         return keras.initializers.get({"class_name": name, "config": {"seed": seed}})
+
+
+def scaler_transform(scaler, array):
+    original_shape = array.shape
+    scaled = scaler.transform(np.reshape(array, (-1, 1)))
+    return np.reshape(scaled, original_shape)
