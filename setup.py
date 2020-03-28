@@ -16,20 +16,25 @@ def read(f):
 
 def read_requirements(fname):
     with open(fname) as requirements_file:
-        reqs = requirements_file.read().split('\n')
-        requirements_w_version = [r.split(';') for r in reqs]
-        reqs = [r[0] for r in requirements_w_version if len(r) == 1 or '>' in r[1]]
+        reqs = requirements_file.read().split("\n")
+        requirements_w_version = [r.split(";") for r in reqs]
+        reqs = [r[0] for r in requirements_w_version if len(r) == 1 or ">" in r[1]]
         return [
-            x for x in reqs if x.strip() != '' and not x.startswith('-') and not x.startswith('#')
+            x
+            for x in reqs
+            if x.strip() != "" and not x.startswith("-") and not x.startswith("#")
         ]
 
-requirements = read_requirements('requirements.txt')
+
+requirements = read_requirements("requirements.txt")
 extras_require = {}
 
 
 def read_version():
     regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
-    init_py = os.path.join(os.path.dirname(__file__), "time_series_experiments", "__init__.py")
+    init_py = os.path.join(
+        os.path.dirname(__file__), "time_series_experiments", "__init__.py"
+    )
     with open(init_py) as f:
         for line in f:
             match = regexp.match(line)
