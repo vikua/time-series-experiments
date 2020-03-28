@@ -5,7 +5,11 @@ black:
 	black time_series_experiments tests setup.py
 
 
-test:
+flake:
+	flake8 time_series_experiments tests setup.py
+
+
+test: flake
 	py.test -s -vv $(FLAGS) ./tests/
 
 

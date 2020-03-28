@@ -227,8 +227,6 @@ def test_positional_encoding_table():
 def test_positional_encoding():
     fdw = 28
     fw = 7
-    attention_dim = 32
-    num_heads = 4
 
     x_train, y_train, x_test, y_test = simple_seq_data(
         nrows=1000, freq="1H", fdw=fdw, fw=fw, test_size=0.2

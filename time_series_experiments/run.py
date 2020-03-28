@@ -1,6 +1,4 @@
 import argparse
-import os
-import pickle
 import random
 
 import numpy as np
@@ -24,6 +22,8 @@ def train(args):
     y_train = target[y_train_idx]
     x_test = target[x_test_idx]
     y_test = target[y_test_idx]
+
+    _, _, _, _ = x_train, y_train, x_test, y_test
 
 
 if __name__ == "__main__":

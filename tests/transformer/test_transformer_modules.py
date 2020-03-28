@@ -12,10 +12,7 @@ from time_series_experiments.transformer.modules import (
     TransformerEncoder,
     TransformerDecoder,
 )
-from time_series_experiments.transformer.layers import (
-    PositionalEncoding,
-    PaddingLookAheadMask,
-)
+from time_series_experiments.transformer.layers import PaddingLookAheadMask
 
 from time_series_experiments.utils import get_initializer
 from time_series_experiments.utils import rmse
@@ -100,8 +97,6 @@ class TestTransformer(object):
 def test_position_wise_ffnn():
     fdw = 28
     fw = 7
-    attention_dim = 32
-    num_heads = 4
 
     x_train, y_train, x_test, y_test = simple_seq_data(
         nrows=1000, freq="1H", fdw=fdw, fw=fw, test_size=0.2
@@ -506,7 +501,6 @@ def test_transformer_model_predictions():
     )
 
     x_test_example = x_test[0][np.newaxis, :, :]
-    y_test_example = y_test[0][np.newaxis, :, np.newaxis]
     decoder_inputs = np.array([0.0])[np.newaxis, :, np.newaxis]
 
     y_pred = np.empty((fw,))
