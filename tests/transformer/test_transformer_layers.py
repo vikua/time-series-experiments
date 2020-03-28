@@ -115,7 +115,7 @@ def test_multi_head_attention():
 
     y_pred = model.predict(x_test)
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 0.5
 
 
@@ -160,7 +160,7 @@ def test_multi_head_attention_padding_mask():
     )
     y_pred = model.predict([x_test, mask])
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 0.5
 
 
@@ -203,7 +203,7 @@ def test_multi_head_attention_lookahead_mask():
     mask = np.expand_dims(mask, axis=1)
     y_pred = model.predict([x_test, mask])
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 0.5
 
 
@@ -250,7 +250,7 @@ def test_positional_encoding():
     model.fit(x_train, y_train, epochs=5, batch_size=32, shuffle=False)
     y_pred = model.predict(x_test)
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 0.5
 
 
@@ -289,5 +289,5 @@ def test_positional_encoding_and_attention():
 
     y_pred = model.predict(x_test)
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 0.5

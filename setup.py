@@ -31,7 +31,7 @@ extras_require = {}
 
 
 def read_version():
-    regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
+    regexp = re.compile(r'^__version__\W*=\W*"([\d.abrc]+)"')
     init_py = os.path.join(
         os.path.dirname(__file__), "time_series_experiments", "__init__.py"
     )

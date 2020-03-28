@@ -125,7 +125,7 @@ def test_position_wise_ffnn():
 
     y_pred = model.predict(x_test)
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 0.5
 
 
@@ -162,7 +162,7 @@ def test_transformer_encoder_layer():
 
     y_pred = model.predict(x_test)
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 2.0
 
 
@@ -200,7 +200,7 @@ def test_transformer_encoder_layer_masking():
 
     y_pred = model.predict(x_test)
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 2.0
 
 
@@ -257,7 +257,7 @@ def test_transformer_decoder_layer():
     decoder_inputs_test = create_decoder_inputs(y_test)
     y_pred = model.predict([x_test, decoder_inputs_test])
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 2.0
 
 
@@ -319,7 +319,7 @@ def test_transformer_decoder_layer_masking():
     decoder_inputs_test = create_decoder_inputs(y_test)
     y_pred = model.predict([x_test, decoder_inputs_test])
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 2.0
 
 
@@ -360,7 +360,7 @@ def test_transformer_encoder():
 
     y_pred = model.predict(x_test)
     assert np.all(np.isfinite(y_pred))
-    error = rmse(y_pred, y_test)
+    error = rmse(y_test, y_pred)
     assert error < 3.0
 
 
@@ -417,7 +417,7 @@ def test_transformer_decoder():
     decoder_inputs_test = create_decoder_inputs(y_test)
     y_pred = model.predict([x_test, decoder_inputs_test])
     assert np.all(np.isfinite(y_pred))
-    error = rmse(np.squeeze(y_pred), y_test)
+    error = rmse(y_test, np.squeeze(y_pred))
     assert error < 2.0
 
 
@@ -460,7 +460,7 @@ def test_transformer():
     decoder_inputs_test = create_decoder_inputs(y_test)
     y_pred = model.predict([x_test, decoder_inputs_test])
     assert np.all(np.isfinite(y_pred))
-    error = rmse(np.squeeze(y_pred), y_test)
+    error = rmse(y_test, np.squeeze(y_pred))
     assert error < 2.0
 
 
@@ -511,5 +511,5 @@ def test_transformer_model_predictions():
         decoder_inputs = np.concatenate([decoder_inputs, last_pred], axis=1)
 
     assert np.all(np.isfinite(y_pred))
-    error = rmse(np.squeeze(y_pred), y_test)
+    error = rmse(y_test[0], np.squeeze(y_pred))
     assert error < 1.0

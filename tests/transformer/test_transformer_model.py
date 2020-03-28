@@ -19,7 +19,8 @@ def clear_session():
     random.seed(RANDOM_SEED)
 
 
-def test_transformer():
+@pytest.mark.parametrize("num_layers", [1, 2])
+def test_transformer(num_layers):
     fdw = 28
     fw = 7
 
@@ -28,7 +29,7 @@ def test_transformer():
     )
 
     transformer = Transformer(
-        num_layers=1,
+        num_layers=num_layers,
         attention_dim=32,
         num_heads=4,
         linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
@@ -41,5 +42,9 @@ def test_transformer():
     )
 
     transformer.fit(x_train, y_train, verbose=1)
-    y_pred, _ = transformer.predict(x_test)
-    assert rmse(y_pred, y_test) < 1.0
+    y_pred, weights = transformer.predict(x_test)
+    assert rmse(y_test, y_pred) < 1.0
+
+    assert len(weights["encoder_attention"]) == num_layers
+    assert len(weights["decoder_attention"]) == num_layers
+    assert len(weights["decoder_encoder_attention"]) == num_layers

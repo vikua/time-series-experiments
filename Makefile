@@ -28,11 +28,20 @@ cov_only: flake
 
 
 install:
-	pip install -r requirements-dev.txt
+	pip install -r requirements.txt
+
+
+develop:
+	python setup.py develop
+
+
+build:
+	python setup.py build
 
 
 clean:
 	rm -rf `find . -name __pycache__`
+	rm -rf `find . -name .pytest_cache`
 	rm -f `find . -type f -name '*.py[co]' `
 	rm -f `find . -type f -name '*~' `
 	rm -f `find . -type f -name '.*~' `
@@ -46,6 +55,7 @@ clean:
 	rm -rf htmlcov
 	rm -rf dist
 	rm -rf bin/*
+	rm -rf *.egg-info
 
 
 doc:
