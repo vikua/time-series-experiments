@@ -20,7 +20,40 @@ def get_initializer(name, seed):
         return keras.initializers.get({"class_name": name, "config": {"seed": seed}})
 
 
-def scaler_transform(scaler, array):
-    original_shape = array.shape
-    scaled = scaler.transform(np.reshape(array, (-1, 1)))
-    return np.reshape(scaled, original_shape)
+class NoOpScaler(object):
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def fit(self, data):
+        pass
+
+    def transform(self, data):
+        return data
+
+    def inverse_transform(self, data):
+        return data
+
+
+class ScalerWrapper(object):
+    def __init__(self, scaler, log_transform=False):
+        self.scaler = scaler
+        self.log_transform = log_transform
+
+    def fit(self, data):
+        data = np.reshape(data, (-1, 1))
+        if self.log_transform:
+            data = np.log(data)
+        self.scaler.fit(data)
+
+    def transform(self, data):
+        if self.log_transform:
+            data = np.log(data)
+        original_shape = data.shape
+        scaled_data = self.scaler.transform(np.reshape(data, (-1, 1)))
+        return np.reshape(scaled_data, original_shape)
+
+    def inverse_transform(self, data):
+        result = self.scaler.inverse_transform(data)
+        if self.log_transform:
+            result = np.exp(result)
+        return result

@@ -10,4 +10,4 @@ class LatestNaiveBaseline(object):
 
     def predict(self, X, **kwargs):
         preds = X[:, np.newaxis, -1]
-        return np.tile(preds, (self.fw, 1))
+        return np.squeeze(np.tile(preds, (self.fw, 1)))
