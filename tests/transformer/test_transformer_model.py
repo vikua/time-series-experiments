@@ -22,7 +22,8 @@ def clear_session():
 @pytest.mark.parametrize("num_layers", [1, 2])
 @pytest.mark.parametrize("layer_norm_epsilon", [1e-3, None])
 @pytest.mark.parametrize("dff", [None, 32])
-def test_transformer(num_layers, layer_norm_epsilon, dff):
+@pytest.mark.parametrize("pos_encoding_dim", [None, 8])
+def test_transformer(num_layers, layer_norm_epsilon, dff, pos_encoding_dim):
     fdw = 28
     fw = 7
 
@@ -36,6 +37,7 @@ def test_transformer(num_layers, layer_norm_epsilon, dff):
         num_heads=4,
         hidden_activation="linear",
         dff=dff,
+        pos_encoding_dim=pos_encoding_dim,
         hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),

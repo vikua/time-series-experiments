@@ -181,6 +181,7 @@ class TransformerEncoder(object):
         attention_dim,
         num_heads,
         hidden_activation="linear",
+        pos_encoding_dim=None,
         dff=None,
         hidden_kernel_initializer="glorot_uniform",
         attention_kernel_initializer="glorot_uniform",
@@ -191,12 +192,20 @@ class TransformerEncoder(object):
     ):
         self.num_layers = num_layers
 
-        self.linear = keras.layers.Dense(
-            attention_dim * num_heads,
-            kernel_initializer=hidden_kernel_initializer,
-            activation=hidden_activation,
-        )
-        self.pos_encoding = PositionalEncoding(attention_dim * num_heads)
+        if pos_encoding_dim:
+            if residual_type != "concat":
+                msg = "Cannot use custom positional encoding dimensionality {} and residual_type {}"
+                raise ValueError(msg.format(pos_encoding_dim, residual_type))
+
+            self.hidden = keras.layers.Lambda(lambda x: x)
+            self.pos_encoding = PositionalEncoding(pos_encoding_dim)
+        else:
+            self.hidden = keras.layers.Dense(
+                attention_dim * num_heads,
+                kernel_initializer=hidden_kernel_initializer,
+                activation=hidden_activation,
+            )
+            self.pos_encoding = PositionalEncoding(attention_dim * num_heads)
 
         self.encoder_layers = [
             TransformerEncoderLayer(
@@ -217,7 +226,7 @@ class TransformerEncoder(object):
         self.residual_op = get_residual_operation(residual_type)
 
     def __call__(self, inputs, padding_mask=None):
-        outputs = self.linear(inputs)
+        outputs = self.hidden(inputs)
         pos_enc = self.pos_encoding(outputs)
         outputs = self.residual_op([outputs, pos_enc])
 
@@ -241,6 +250,7 @@ class TransformerDecoder(object):
         attention_dim,
         num_heads,
         hidden_activation="linear",
+        pos_encoding_dim=None,
         dff=None,
         hidden_kernel_initializer="glorot_uniform",
         attention_kernel_initializer="glorot_uniform",
@@ -251,12 +261,20 @@ class TransformerDecoder(object):
     ):
         self.num_layers = num_layers
 
-        self.linear = keras.layers.Dense(
-            attention_dim * num_heads,
-            kernel_initializer=hidden_kernel_initializer,
-            activation=hidden_activation,
-        )
-        self.pos_encoding = PositionalEncoding(attention_dim * num_heads)
+        if pos_encoding_dim:
+            if residual_type != "concat":
+                msg = "Cannot use custom positional encoding dimensionality {} and residual_type {}"
+                raise ValueError(msg.format(pos_encoding_dim, residual_type))
+
+            self.hidden = keras.layers.Lambda(lambda x: x)
+            self.pos_encoding = PositionalEncoding(pos_encoding_dim)
+        else:
+            self.hidden = keras.layers.Dense(
+                attention_dim * num_heads,
+                kernel_initializer=hidden_kernel_initializer,
+                activation=hidden_activation,
+            )
+            self.pos_encoding = PositionalEncoding(attention_dim * num_heads)
 
         self.decoder_layers = [
             TransformerDecoderLayer(
@@ -277,7 +295,7 @@ class TransformerDecoder(object):
         self.residual_op = get_residual_operation(residual_type)
 
     def __call__(self, inputs, encoder_outputs, padding_mask=None, lookahead_mask=None):
-        outputs = self.linear(inputs)
+        outputs = self.hidden(inputs)
         pos_enc = self.pos_encoding(outputs)
         outputs = self.residual_op([outputs, pos_enc])
 

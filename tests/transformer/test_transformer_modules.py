@@ -374,6 +374,70 @@ def test_transformer_encoder(residual_type):
     assert error < 3.0
 
 
+def test_transformer_encoder_custom_positional_encoding():
+    fdw = 28
+    fw = 7
+    attention_dim = 32
+    num_heads = 4
+
+    x_train, y_train, x_test, y_test = simple_seq_data(
+        nrows=1000, freq="1H", fdw=fdw, fw=fw, test_size=0.2
+    )
+
+    inputs = keras.Input(shape=(fdw, 1))
+
+    outputs, encoder_self_attention = TransformerEncoder(
+        num_layers=2,
+        attention_dim=attention_dim,
+        num_heads=num_heads,
+        pos_encoding_dim=8,
+        hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        residual_type="concat",
+    )(inputs)
+
+    outputs = keras.layers.Flatten()(outputs)
+    outputs = keras.layers.Dense(
+        fw,
+        kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        activation="linear",
+    )(outputs)
+    model = keras.Model(inputs=inputs, outputs=outputs)
+
+    model.compile(
+        optimizer=keras.optimizers.Adam(0.01), loss=keras.losses.MeanSquaredError()
+    )
+
+    model.fit(x_train, y_train, epochs=5, batch_size=32, shuffle=False)
+
+    y_pred = model.predict(x_test)
+    assert np.all(np.isfinite(y_pred))
+    error = rmse(y_test, y_pred)
+    assert error < 3.0
+
+
+def test_transformer_encoder_custom_positional_encoding_error():
+    attention_dim = 32
+    num_heads = 4
+
+    with pytest.raises(ValueError) as excinfo:
+        outputs, encoder_self_attention = TransformerEncoder(
+            num_layers=2,
+            attention_dim=attention_dim,
+            num_heads=num_heads,
+            pos_encoding_dim=8,
+            hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+            attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+            pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+            residual_type="add",
+        )
+    expected_msg = (
+        "Cannot use custom positional encoding dimensionality 8 and residual_type add"
+    )
+    assert expected_msg == str(excinfo.value)
+
+
 @pytest.mark.parametrize("residual_type", ["add", "concat"])
 def test_transformer_decoder(residual_type):
     fdw = 28
@@ -431,6 +495,86 @@ def test_transformer_decoder(residual_type):
     assert np.all(np.isfinite(y_pred))
     error = rmse(y_test, np.squeeze(y_pred))
     assert error < 2.0
+
+
+def test_transformer_decoder_custom_positional_encoding():
+    fdw = 28
+    fw = 7
+    attention_dim = 32
+    num_heads = 4
+
+    x_train, y_train, x_test, y_test = simple_seq_data(
+        nrows=1000, freq="1H", fdw=fdw, fw=fw, test_size=0.2
+    )
+    decoder_inputs_train = create_decoder_inputs(y_train)
+
+    inputs = keras.Input(shape=(fdw, 1))
+    targets = keras.Input(shape=(fw, 1))
+
+    padding_mask = AllOnesPaddingMask()(inputs)
+    lookahead_mask = PaddingLookAheadMask()(targets)
+
+    outputs, encoder_self_attention = TransformerEncoder(
+        num_layers=2,
+        attention_dim=attention_dim,
+        num_heads=num_heads,
+        hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+    )(inputs, padding_mask=padding_mask)
+
+    outputs, decoder_weights, encoder_decoder_weights = TransformerDecoder(
+        num_layers=2,
+        attention_dim=attention_dim,
+        num_heads=num_heads,
+        pos_encoding_dim=8,
+        hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        residual_type="concat",
+    )(targets, outputs, padding_mask=padding_mask, lookahead_mask=lookahead_mask)
+
+    outputs = keras.layers.Dense(
+        1,
+        kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        activation="linear",
+    )(outputs)
+    model = keras.Model(inputs=[inputs, targets], outputs=outputs)
+
+    model.compile(
+        optimizer=keras.optimizers.Adam(0.01), loss=keras.losses.MeanSquaredError()
+    )
+
+    model.fit(
+        [x_train, decoder_inputs_train], y_train, epochs=5, batch_size=32, shuffle=False
+    )
+
+    decoder_inputs_test = create_decoder_inputs(y_test)
+    y_pred = model.predict([x_test, decoder_inputs_test])
+    assert np.all(np.isfinite(y_pred))
+    error = rmse(y_test, np.squeeze(y_pred))
+    assert error < 3.0
+
+
+def test_transformer_decoder_custom_positional_encoding_error():
+    attention_dim = 32
+    num_heads = 4
+
+    with pytest.raises(ValueError) as excinfo:
+        outputs, decoder_weights, encoder_decoder_weights = TransformerDecoder(
+            num_layers=2,
+            attention_dim=attention_dim,
+            num_heads=num_heads,
+            pos_encoding_dim=8,
+            hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+            attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+            pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+            residual_type="add",
+        )
+    expected_msg = (
+        "Cannot use custom positional encoding dimensionality 8 and residual_type add"
+    )
+    assert expected_msg == str(excinfo.value)
 
 
 def test_transformer():

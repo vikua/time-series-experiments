@@ -13,6 +13,7 @@ class Transformer(object):
         attention_dim,
         num_heads,
         dff=None,
+        pos_encoding_dim=None,
         hidden_activation="linear",
         hidden_kernel_initializer="glorot_uniform",
         attention_kernel_initializer="glorot_uniform",
@@ -29,14 +30,16 @@ class Transformer(object):
         self.num_layers = num_layers
         self.attention_dim = attention_dim
         self.num_heads = num_heads
-        self.hidden_activation = hidden_activation
         self.dff = dff
+        self.pos_encoding_dim = pos_encoding_dim
+        self.hidden_activation = hidden_activation
         self.hidden_kernel_initializer = hidden_kernel_initializer
         self.attention_kernel_initializer = attention_kernel_initializer
         self.pwffn_kernel_initializer = pwffn_kernel_initializer
         self.output_kernel_initializer = output_kernel_initializer
         self.layer_norm_epsilon = layer_norm_epsilon
         self.dropout_rate = dropout_rate
+        self.residual_type = "concat" if self.pos_encoding_dim else "add"
 
         self.batch_size = batch_size
         self.epochs = epochs
@@ -54,9 +57,17 @@ class Transformer(object):
     def build_model(self):
         inputs = keras.Input(shape=(self.fwd, self.input_dim), name="inputs")
         targets = keras.Input(shape=(None, self.output_dim), name="targets")
+
+        if self.pos_encoding_dim:
+            encoder_outputs_dim = (
+                self.num_layers * 2 * self.attention_dim * self.num_heads
+                + self.input_dim
+                + self.pos_encoding_dim
+            )
+        else:
+            encoder_outputs_dim = self.attention_dim * self.num_heads
         encoder_outputs_inputs = keras.Input(
-            shape=(self.fdw, self.attention_dim * self.num_heads),
-            name="encoder_outputs_inputs",
+            shape=(self.fdw, encoder_outputs_dim), name="encoder_outputs_inputs",
         )
 
         encoder_outputs, encoder_attention = TransformerEncoder(
@@ -70,6 +81,8 @@ class Transformer(object):
             pwffn_kernel_initializer=self.pwffn_kernel_initializer,
             layer_norm_epsilon=self.layer_norm_epsilon,
             dropout_rate=self.dropout_rate,
+            pos_encoding_dim=self.pos_encoding_dim,
+            residual_type=self.residual_type,
         )(inputs)
 
         lookahead_mask = PaddingLookAheadMask()(targets)
@@ -85,6 +98,8 @@ class Transformer(object):
             pwffn_kernel_initializer=self.pwffn_kernel_initializer,
             layer_norm_epsilon=self.layer_norm_epsilon,
             dropout_rate=self.dropout_rate,
+            pos_encoding_dim=self.pos_encoding_dim,
+            residual_type=self.residual_type,
         )
         outputs, _, _ = decoder(targets, encoder_outputs, lookahead_mask=lookahead_mask)
 
