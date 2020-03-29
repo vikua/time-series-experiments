@@ -13,7 +13,8 @@ class Transformer(object):
         attention_dim,
         num_heads,
         dff=None,
-        linear_kernel_initializer="glorot_uniform",
+        hidden_activation="linear",
+        hidden_kernel_initializer="glorot_uniform",
         attention_kernel_initializer="glorot_uniform",
         pwffn_kernel_initializer="glorot_uniform",
         output_kernel_initializer="glorot_uniform",
@@ -28,8 +29,9 @@ class Transformer(object):
         self.num_layers = num_layers
         self.attention_dim = attention_dim
         self.num_heads = num_heads
+        self.hidden_activation = hidden_activation
         self.dff = dff
-        self.linear_kernel_initializer = linear_kernel_initializer
+        self.hidden_kernel_initializer = hidden_kernel_initializer
         self.attention_kernel_initializer = attention_kernel_initializer
         self.pwffn_kernel_initializer = pwffn_kernel_initializer
         self.output_kernel_initializer = output_kernel_initializer
@@ -61,8 +63,9 @@ class Transformer(object):
             num_layers=self.num_layers,
             attention_dim=self.attention_dim,
             num_heads=self.num_heads,
+            hidden_activation=self.hidden_activation,
             dff=self.dff,
-            linear_kernel_initializer=self.linear_kernel_initializer,
+            hidden_kernel_initializer=self.hidden_kernel_initializer,
             attention_kernel_initializer=self.attention_kernel_initializer,
             pwffn_kernel_initializer=self.pwffn_kernel_initializer,
             layer_norm_epsilon=self.layer_norm_epsilon,
@@ -75,8 +78,9 @@ class Transformer(object):
             num_layers=self.num_layers,
             attention_dim=self.attention_dim,
             num_heads=self.num_heads,
+            hidden_activation=self.hidden_activation,
             dff=self.dff,
-            linear_kernel_initializer=self.linear_kernel_initializer,
+            hidden_kernel_initializer=self.hidden_kernel_initializer,
             attention_kernel_initializer=self.attention_kernel_initializer,
             pwffn_kernel_initializer=self.pwffn_kernel_initializer,
             layer_norm_epsilon=self.layer_norm_epsilon,

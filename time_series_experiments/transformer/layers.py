@@ -19,33 +19,31 @@ class MultiHeadAttention(keras.layers.Layer):
         self.temperature = temperature
         self.kernel_initializer = kernel_initializer
 
-        self.input_dim = None
-
         self.W_Q = None
         self.W_K = None
         self.W_V = None
         self.W_O = None
 
     def build(self, input_shape):
-        _, _, self.input_dim = input_shape[0]
+        q_shape, k_shape, v_shape = input_shape
 
         self.W_Q = self.add_weight(
             name="w_q",
-            shape=(self.input_dim, self.attention_dim * self.num_heads),
+            shape=(q_shape[-1], self.attention_dim * self.num_heads),
             initializer=self.kernel_initializer,
             trainable=True,
         )
 
         self.W_K = self.add_weight(
             name="w_k",
-            shape=(self.input_dim, self.attention_dim * self.num_heads),
+            shape=(k_shape[-1], self.attention_dim * self.num_heads),
             initializer=self.kernel_initializer,
             trainable=True,
         )
 
         self.W_V = self.add_weight(
             name="w_v",
-            shape=(self.input_dim, self.attention_dim * self.num_heads),
+            shape=(v_shape[-1], self.attention_dim * self.num_heads),
             initializer=self.kernel_initializer,
             trainable=True,
         )

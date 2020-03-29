@@ -6,6 +6,15 @@ from .layers import (
 )
 
 
+def get_residual_operation(residual_type):
+    if residual_type == "add":
+        return keras.layers.add
+    elif residual_type == "concat":
+        return keras.layers.concatenate
+    else:
+        raise ValueError("Unknown residual_type {}".format(residual_type))
+
+
 class PositionWiseFeedForwardNetwork(object):
     def __init__(
         self,
@@ -44,6 +53,7 @@ class TransformerEncoderLayer(object):
         pwffn_kernel_initializer="glorot_uniform",
         layer_norm_epsilon=0.001,
         dropout_rate=0.0,
+        residual_type="add",
     ):
         self.mha = MultiHeadAttention(
             attention_dim=attention_dim,
@@ -57,23 +67,33 @@ class TransformerEncoderLayer(object):
             kernel_initializer=pwffn_kernel_initializer,
         )
 
-        self.layernorm1 = keras.layers.LayerNormalization(epsilon=layer_norm_epsilon)
-        self.layernorm2 = keras.layers.LayerNormalization(epsilon=layer_norm_epsilon)
+        if layer_norm_epsilon is not None:
+            self.layernorm1 = keras.layers.LayerNormalization(
+                epsilon=layer_norm_epsilon
+            )
+            self.layernorm2 = keras.layers.LayerNormalization(
+                epsilon=layer_norm_epsilon
+            )
+        else:
+            self.layernorm1 = keras.layers.Lambda(lambda x: x)
+            self.layernorm2 = keras.layers.Lambda(lambda x: x)
 
         self.dropout1 = keras.layers.Dropout(dropout_rate)
         self.dropout2 = keras.layers.Dropout(dropout_rate)
+
+        self.residual_op = get_residual_operation(residual_type)
 
     def __call__(self, inputs, padding_mask=None):
         outputs, encoder_self_attention = self.mha(
             [inputs, inputs, inputs], mask=padding_mask
         )
         outputs = self.dropout1(outputs)
-        outputs = keras.layers.add([inputs, outputs])
+        outputs = self.residual_op([inputs, outputs])
         outputs = self.layernorm1(outputs)
 
         ffn_outputs = self.pwffn(outputs)
         ffn_outputs = self.dropout2(ffn_outputs)
-        outputs = keras.layers.add([outputs, ffn_outputs])
+        outputs = self.residual_op([outputs, ffn_outputs])
         outputs = self.layernorm2(outputs)
 
         return outputs, encoder_self_attention
@@ -89,6 +109,7 @@ class TransformerDecoderLayer(object):
         pwffn_kernel_initializer="glorot_uniform",
         layer_norm_epsilon=0.001,
         dropout_rate=0.0,
+        residual_type="add",
     ):
         self.mha1 = MultiHeadAttention(
             attention_dim=attention_dim,
@@ -107,20 +128,33 @@ class TransformerDecoderLayer(object):
             kernel_initializer=pwffn_kernel_initializer,
         )
 
-        self.layernorm1 = keras.layers.LayerNormalization(epsilon=layer_norm_epsilon)
-        self.layernorm2 = keras.layers.LayerNormalization(epsilon=layer_norm_epsilon)
-        self.layernorm3 = keras.layers.LayerNormalization(epsilon=layer_norm_epsilon)
+        if layer_norm_epsilon is not None:
+            self.layernorm1 = keras.layers.LayerNormalization(
+                epsilon=layer_norm_epsilon
+            )
+            self.layernorm2 = keras.layers.LayerNormalization(
+                epsilon=layer_norm_epsilon
+            )
+            self.layernorm3 = keras.layers.LayerNormalization(
+                epsilon=layer_norm_epsilon
+            )
+        else:
+            self.layernorm1 = keras.layers.Lambda(lambda x: x)
+            self.layernorm2 = keras.layers.Lambda(lambda x: x)
+            self.layernorm3 = keras.layers.Lambda(lambda x: x)
 
         self.dropout1 = keras.layers.Dropout(dropout_rate)
         self.dropout2 = keras.layers.Dropout(dropout_rate)
         self.dropout3 = keras.layers.Dropout(dropout_rate)
+
+        self.residual_op = get_residual_operation(residual_type)
 
     def __call__(self, inputs, encoder_outputs, padding_mask=None, lookahead_mask=None):
         outputs, decoder_self_attention = self.mha1(
             [inputs, inputs, inputs], mask=lookahead_mask
         )
         outputs = self.dropout1(outputs)
-        outputs = keras.layers.add([inputs, outputs])
+        outputs = self.residual_op([inputs, outputs])
         outputs = self.layernorm1(outputs)
 
         mha2_outputs, encoder_decoder_attention = self.mha2(
@@ -129,12 +163,12 @@ class TransformerDecoderLayer(object):
             # [encoder_outputs, encoder_outputs, outputs], mask=padding_mask
         )
         mha2_outputs = self.dropout2(mha2_outputs)
-        outputs = keras.layers.add([outputs, mha2_outputs])
+        outputs = self.residual_op([outputs, mha2_outputs])
         outputs = self.layernorm2(outputs)
 
         ffn_outputs = self.pwffn(outputs)
         ffn_outputs = self.dropout3(ffn_outputs)
-        outputs = keras.layers.add([outputs, ffn_outputs])
+        outputs = self.residual_op([outputs, ffn_outputs])
         outputs = self.layernorm3(outputs)
 
         return outputs, decoder_self_attention, encoder_decoder_attention
@@ -146,41 +180,46 @@ class TransformerEncoder(object):
         num_layers,
         attention_dim,
         num_heads,
+        hidden_activation="linear",
         dff=None,
-        linear_kernel_initializer="glorot_uniform",
+        hidden_kernel_initializer="glorot_uniform",
         attention_kernel_initializer="glorot_uniform",
         pwffn_kernel_initializer="glorot_uniform",
         layer_norm_epsilon=0.001,
         dropout_rate=0.0,
+        residual_type="add",
     ):
         self.num_layers = num_layers
 
         self.linear = keras.layers.Dense(
             attention_dim * num_heads,
-            kernel_initializer=linear_kernel_initializer,
-            activation=None,
+            kernel_initializer=hidden_kernel_initializer,
+            activation=hidden_activation,
         )
         self.pos_encoding = PositionalEncoding(attention_dim * num_heads)
 
         self.encoder_layers = [
             TransformerEncoderLayer(
-                attention_dim,
-                num_heads,
-                dff,
-                attention_kernel_initializer,
-                pwffn_kernel_initializer,
-                layer_norm_epsilon,
-                dropout_rate,
+                attention_dim=attention_dim,
+                num_heads=num_heads,
+                dff=dff,
+                attention_kernel_initializer=attention_kernel_initializer,
+                pwffn_kernel_initializer=pwffn_kernel_initializer,
+                layer_norm_epsilon=layer_norm_epsilon,
+                dropout_rate=dropout_rate,
+                residual_type=residual_type,
             )
             for i in range(self.num_layers)
         ]
 
         self.dropout = keras.layers.Dropout(dropout_rate)
 
+        self.residual_op = get_residual_operation(residual_type)
+
     def __call__(self, inputs, padding_mask=None):
         outputs = self.linear(inputs)
         pos_enc = self.pos_encoding(outputs)
-        outputs = keras.layers.add([outputs, pos_enc])
+        outputs = self.residual_op([outputs, pos_enc])
 
         outputs = self.dropout(outputs)
 
@@ -201,41 +240,46 @@ class TransformerDecoder(object):
         num_layers,
         attention_dim,
         num_heads,
+        hidden_activation="linear",
         dff=None,
-        linear_kernel_initializer="glorot_uniform",
+        hidden_kernel_initializer="glorot_uniform",
         attention_kernel_initializer="glorot_uniform",
         pwffn_kernel_initializer="glorot_uniform",
         layer_norm_epsilon=0.001,
         dropout_rate=0.0,
+        residual_type="add",
     ):
         self.num_layers = num_layers
 
         self.linear = keras.layers.Dense(
             attention_dim * num_heads,
-            kernel_initializer=linear_kernel_initializer,
-            activation=None,
+            kernel_initializer=hidden_kernel_initializer,
+            activation=hidden_activation,
         )
         self.pos_encoding = PositionalEncoding(attention_dim * num_heads)
 
         self.decoder_layers = [
             TransformerDecoderLayer(
-                attention_dim,
-                num_heads,
-                dff,
-                attention_kernel_initializer,
-                pwffn_kernel_initializer,
-                layer_norm_epsilon,
-                dropout_rate,
+                attention_dim=attention_dim,
+                num_heads=num_heads,
+                dff=dff,
+                attention_kernel_initializer=attention_kernel_initializer,
+                pwffn_kernel_initializer=pwffn_kernel_initializer,
+                layer_norm_epsilon=layer_norm_epsilon,
+                dropout_rate=dropout_rate,
+                residual_type=residual_type,
             )
             for i in range(self.num_layers)
         ]
 
         self.dropout = keras.layers.Dropout(dropout_rate)
 
+        self.residual_op = get_residual_operation(residual_type)
+
     def __call__(self, inputs, encoder_outputs, padding_mask=None, lookahead_mask=None):
         outputs = self.linear(inputs)
         pos_enc = self.pos_encoding(outputs)
-        outputs = keras.layers.add([outputs, pos_enc])
+        outputs = self.residual_op([outputs, pos_enc])
 
         outputs = self.dropout(outputs)
 

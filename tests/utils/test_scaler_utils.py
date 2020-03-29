@@ -15,7 +15,7 @@ from ..conftest import RANDOM_SEED
     ],
 )
 @pytest.mark.parametrize("log_transform", [True, False])
-def test_scaler_wrapper_with_minmax(scaler_cls, scaler_args, log_transform):
+def test_scaler_wrapper(scaler_cls, scaler_args, log_transform):
     random_state = np.random.RandomState(RANDOM_SEED)
     data = random_state.randint(1, 1000, (100, 5)).astype("float")
 

@@ -43,7 +43,7 @@ class TestTransformer(object):
         attention_dim,
         num_heads,
         dff=None,
-        linear_kernel_initializer="glorot_uniform",
+        hidden_kernel_initializer="glorot_uniform",
         attention_kernel_initializer="glorot_uniform",
         pwffn_kernel_initializer="glorot_uniform",
         output_kernel_initializer="glorot_uniform",
@@ -53,27 +53,27 @@ class TestTransformer(object):
         self.lookahead_mask = PaddingLookAheadMask()
 
         self.encoder = TransformerEncoder(
-            num_layers,
-            attention_dim,
-            num_heads,
-            dff,
-            linear_kernel_initializer,
-            attention_kernel_initializer,
-            pwffn_kernel_initializer,
-            layer_norm_epsilon,
-            dropout_rate,
+            num_layers=num_layers,
+            attention_dim=attention_dim,
+            num_heads=num_heads,
+            dff=dff,
+            hidden_kernel_initializer=hidden_kernel_initializer,
+            attention_kernel_initializer=attention_kernel_initializer,
+            pwffn_kernel_initializer=pwffn_kernel_initializer,
+            layer_norm_epsilon=layer_norm_epsilon,
+            dropout_rate=dropout_rate,
         )
 
         self.decoder = TransformerDecoder(
-            num_layers,
-            attention_dim,
-            num_heads,
-            dff,
-            linear_kernel_initializer,
-            attention_kernel_initializer,
-            pwffn_kernel_initializer,
-            layer_norm_epsilon,
-            dropout_rate,
+            num_layers=num_layers,
+            attention_dim=attention_dim,
+            num_heads=num_heads,
+            dff=dff,
+            hidden_kernel_initializer=hidden_kernel_initializer,
+            attention_kernel_initializer=attention_kernel_initializer,
+            pwffn_kernel_initializer=pwffn_kernel_initializer,
+            layer_norm_epsilon=layer_norm_epsilon,
+            dropout_rate=dropout_rate,
         )
 
         self.output_layer = keras.layers.Dense(
@@ -129,7 +129,8 @@ def test_position_wise_ffnn():
     assert error < 0.5
 
 
-def test_transformer_encoder_layer():
+@pytest.mark.parametrize("residual_type", ["add", "concat"])
+def test_transformer_encoder_layer(residual_type):
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -145,6 +146,7 @@ def test_transformer_encoder_layer():
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        residual_type=residual_type,
     )(inputs)
     outputs = keras.layers.Flatten()(outputs)
     outputs = keras.layers.Dense(
@@ -166,7 +168,8 @@ def test_transformer_encoder_layer():
     assert error < 2.0
 
 
-def test_transformer_encoder_layer_masking():
+@pytest.mark.parametrize("residual_type", ["add", "concat"])
+def test_transformer_encoder_layer_masking(residual_type):
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -183,6 +186,7 @@ def test_transformer_encoder_layer_masking():
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        residual_type=residual_type,
     )(inputs, padding_mask=padding_mask)
     outputs = keras.layers.Flatten()(outputs)
     outputs = keras.layers.Dense(
@@ -204,7 +208,8 @@ def test_transformer_encoder_layer_masking():
     assert error < 2.0
 
 
-def test_transformer_decoder_layer():
+@pytest.mark.parametrize("residual_type", ["add", "concat"])
+def test_transformer_decoder_layer(residual_type):
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -234,6 +239,7 @@ def test_transformer_decoder_layer():
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        residual_type=residual_type,
     )(
         targets, outputs
     )
@@ -261,7 +267,8 @@ def test_transformer_decoder_layer():
     assert error < 2.0
 
 
-def test_transformer_decoder_layer_masking():
+@pytest.mark.parametrize("residual_type", ["add", "concat"])
+def test_transformer_decoder_layer_masking(residual_type):
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -294,6 +301,7 @@ def test_transformer_decoder_layer_masking():
         num_heads=num_heads,
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        residual_type=residual_type,
     )(
         targets, outputs, padding_mask=padding_mask, lookahead_mask=lookahead_mask
     )
@@ -323,7 +331,8 @@ def test_transformer_decoder_layer_masking():
     assert error < 2.0
 
 
-def test_transformer_encoder():
+@pytest.mark.parametrize("residual_type", ["add", "concat"])
+def test_transformer_encoder(residual_type):
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -339,9 +348,10 @@ def test_transformer_encoder():
         num_layers=2,
         attention_dim=attention_dim,
         num_heads=num_heads,
-        linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        residual_type=residual_type,
     )(inputs)
 
     outputs = keras.layers.Flatten()(outputs)
@@ -364,7 +374,8 @@ def test_transformer_encoder():
     assert error < 3.0
 
 
-def test_transformer_decoder():
+@pytest.mark.parametrize("residual_type", ["add", "concat"])
+def test_transformer_decoder(residual_type):
     fdw = 28
     fw = 7
     attention_dim = 32
@@ -385,7 +396,7 @@ def test_transformer_decoder():
         num_layers=2,
         attention_dim=attention_dim,
         num_heads=num_heads,
-        linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
     )(inputs, padding_mask=padding_mask)
@@ -394,9 +405,10 @@ def test_transformer_decoder():
         num_layers=2,
         attention_dim=attention_dim,
         num_heads=num_heads,
-        linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        residual_type=residual_type,
     )(targets, outputs, padding_mask=padding_mask, lookahead_mask=lookahead_mask)
 
     outputs = keras.layers.Dense(
@@ -439,7 +451,7 @@ def test_transformer():
         num_layers=1,
         attention_dim=attention_dim,
         num_heads=num_heads,
-        linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         output_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
@@ -482,7 +494,7 @@ def test_transformer_model_predictions():
         num_layers=1,
         attention_dim=attention_dim,
         num_heads=num_heads,
-        linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         output_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),

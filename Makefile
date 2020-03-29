@@ -10,7 +10,7 @@ flake:
 
 
 test: flake
-	py.test -s -vv $(FLAGS) ./tests/
+	py.test -vv $(FLAGS) ./tests/
 
 
 mypy:
@@ -18,12 +18,12 @@ mypy:
 
 
 cov cover coverage: flake
-	py.test -s -v --cov-report term --cov-report html --cov time_series_experiments ./tests
+	py.test -vv --cov-report term --cov-report html --cov time_series_experiments ./tests
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 
 cov_only: flake
-	py.test -s -v --cov-report term --cov-report html --cov time_series_experiments ./tests
+	py.test -vv --cov-report term --cov-report html --cov time_series_experiments ./tests
 	@echo "open file://`pwd`/htmlcov/index.html"
 
 

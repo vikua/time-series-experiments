@@ -20,7 +20,9 @@ def clear_session():
 
 
 @pytest.mark.parametrize("num_layers", [1, 2])
-def test_transformer(num_layers):
+@pytest.mark.parametrize("layer_norm_epsilon", [1e-3, None])
+@pytest.mark.parametrize("dff", [None, 32])
+def test_transformer(num_layers, layer_norm_epsilon, dff):
     fdw = 28
     fw = 7
 
@@ -32,10 +34,13 @@ def test_transformer(num_layers):
         num_layers=num_layers,
         attention_dim=32,
         num_heads=4,
-        linear_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        hidden_activation="linear",
+        dff=dff,
+        hidden_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         attention_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         pwffn_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
         output_kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
+        layer_norm_epsilon=layer_norm_epsilon,
         epochs=5,
         optimizer=keras.optimizers.Adam(0.001),
         loss=keras.losses.MeanSquaredError(),
@@ -43,7 +48,7 @@ def test_transformer(num_layers):
 
     transformer.fit(x_train, y_train, verbose=1)
     y_pred, weights = transformer.predict(x_test)
-    assert rmse(y_test, y_pred) < 1.0
+    assert rmse(y_test, y_pred) < 1.1
 
     assert len(weights["encoder_attention"]) == num_layers
     assert len(weights["decoder_attention"]) == num_layers
