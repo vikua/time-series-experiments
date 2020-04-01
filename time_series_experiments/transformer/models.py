@@ -111,7 +111,6 @@ class Transformer(object):
         )
 
     def fit(self, X, y, **kwargs):
-        verbose = kwargs.get("verbose", 0)
         self.fdw, self.input_dim = X.shape[1], X.shape[2]
         self.fw = y.shape[1]
         self.output_dim = 1
@@ -126,8 +125,7 @@ class Transformer(object):
             y,
             epochs=self.epochs,
             batch_size=self.batch_size,
-            shuffle=False,
-            verbose=verbose,
+            **kwargs
         )
 
     def predict(self, X, **kwargs):

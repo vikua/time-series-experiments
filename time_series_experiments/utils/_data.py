@@ -26,7 +26,9 @@ def sliding_window(arr, window_size):
     return arr
 
 
-def train_test_split_index(size, fdw_steps, fw_steps, test_size, random_seed):
+def train_test_split_index(
+    size, fdw_steps, fw_steps, test_size, random_seed, shuffle_train=True
+):
     idx = np.arange(size)
     idx = sliding_window(idx, fdw_steps + fw_steps)
 
@@ -34,9 +36,10 @@ def train_test_split_index(size, fdw_steps, fw_steps, test_size, random_seed):
     train_idx = idx[:train_size]
     test_idx = idx[train_size:]
 
-    random_state = np.random.RandomState(random_seed)
-    shuffle_idx = random_state.permutation(train_idx.shape[0])
-    train_idx = train_idx[shuffle_idx]
+    if shuffle_train:
+        random_state = np.random.RandomState(random_seed)
+        shuffle_idx = random_state.permutation(train_idx.shape[0])
+        train_idx = train_idx[shuffle_idx]
 
     x_train_idx = train_idx[:, :fdw_steps]
     y_train_idx = train_idx[:, fdw_steps:]
