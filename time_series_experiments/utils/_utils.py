@@ -57,3 +57,44 @@ class ScalerWrapper(object):
         if self.log_transform:
             result = np.exp(result)
         return result
+
+
+class MeanScaler(object):
+    def __init__(self, copy=True):
+        self.copy = copy
+        self.scale = None
+
+    def fit(self, X):
+        X = X.astype(np.float)
+
+        self.scale = np.mean(np.abs(X), axis=1, keepdims=True)
+        return self
+
+    def _reshaped_scale(self, X_shape):
+        scale = self.scale
+        dims = len(X_shape) - 1
+        new_shape = (scale.shape[0],) + (1,) * dims
+        return np.reshape(scale, new_shape)
+
+    def transform(self, X):
+        if self.copy:
+            X = X.copy()
+
+        X = X.astype(np.float)
+
+        scale = self._reshaped_scale(X.shape)
+        X /= scale
+        return X
+
+    def inverse_transform(self, X):
+        if self.copy:
+            X = X.copy()
+
+        X = X.astype(np.float)
+
+        scale = self._reshaped_scale(X.shape)
+        X *= scale
+        return X
+
+    def fit_transform(self, X):
+        return self.fit(X).transform(X)

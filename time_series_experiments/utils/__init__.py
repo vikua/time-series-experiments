@@ -3,7 +3,7 @@ from ._data import create_decoder_inputs
 
 from ._utils import rmse, mase
 from ._utils import get_initializer
-from ._utils import NoOpScaler, ScalerWrapper
+from ._utils import NoOpScaler, ScalerWrapper, MeanScaler
 
 
 __all__ = [
@@ -14,4 +14,5 @@ __all__ = [
     "mase",
     "NoOpScaler",
     "ScalerWrapper",
+    "MeanScaler",
 ]
