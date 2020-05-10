@@ -1,16 +1,24 @@
+from enum import Enum
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import backend as K
 
 
+class BlockTypes(Enum):
+    GENERIC = 1
+    TREND = 2
+    SEASONAL = 3
+
+
 class Block(keras.layers.Layer):
     def __init__(
         self,
-        stack_id,
         units,
         theta_units,
         layers=4,
+        stack_id=0,
         activation="relu",
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
@@ -23,11 +31,11 @@ class Block(keras.layers.Layer):
     ):
         super(Block, self).__init__(**kwargs)
 
-        self.stack_id = stack_id
-
         self.units = units
         self.theta_units = theta_units
         self.layers = layers
+        self.stack_id = stack_id
+
         self.activation = keras.activations.get(activation)
 
         self.kernel_initializer = kernel_initializer

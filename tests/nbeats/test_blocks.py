@@ -25,7 +25,7 @@ def clear_session():
     random.seed(RANDOM_SEED)
 
 
-def test_block():
+def test_base_block():
     fdw = 28
     fw = 7
 
@@ -36,7 +36,6 @@ def test_block():
     inputs = keras.Input(shape=(fdw, 1))
     outputs = keras.layers.Reshape((fdw,))(inputs)
     _, outputs = Block(
-        stack_id=0,
         units=8,
         theta_units=8,
         kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
@@ -56,7 +55,11 @@ def test_block():
     assert error < 0.5
 
 
-def test_generic_block():
+@pytest.mark.parametrize(
+    "block_cls, expected_rmse",
+    [(GenericBlock, 0.5), (TrendBlock, 0.4), (SeasonalBlock, 0.35)],
+)
+def test_blocks(block_cls, expected_rmse):
     fdw = 28
     fw = 7
 
@@ -66,10 +69,9 @@ def test_generic_block():
 
     inputs = keras.Input(shape=(fdw, 1))
     outputs = keras.layers.Reshape((fdw,))(inputs)
-    _, forecast = GenericBlock(
+    _, forecast = block_cls(
         fdw=fdw,
         fw=fw,
-        stack_id=0,
         units=8,
         theta_units=8,
         kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
@@ -84,66 +86,4 @@ def test_generic_block():
     y_pred = model.predict(x_test)
     assert np.all(np.isfinite(y_pred))
     error = rmse(y_test, y_pred)
-    assert error < 0.5
-
-
-def test_trend_block():
-    fdw = 28
-    fw = 7
-
-    x_train, y_train, x_test, y_test = simple_seq_data(
-        nrows=1000, freq="1H", fdw=fdw, fw=fw, test_size=0.2
-    )
-
-    inputs = keras.Input(shape=(fdw, 1))
-    outputs = keras.layers.Reshape((fdw,))(inputs)
-    _, forecast = TrendBlock(
-        fdw=fdw,
-        fw=fw,
-        stack_id=0,
-        units=8,
-        theta_units=8,
-        kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
-    )(outputs)
-    model = keras.Model(inputs=inputs, outputs=forecast)
-
-    model.compile(
-        optimizer=keras.optimizers.Adam(0.01), loss=keras.losses.MeanSquaredError()
-    )
-    model.fit(x_train, y_train, epochs=5, batch_size=32, shuffle=False)
-
-    y_pred = model.predict(x_test)
-    assert np.all(np.isfinite(y_pred))
-    error = rmse(y_test, y_pred)
-    assert error < 0.4
-
-
-def test_seasonal_block():
-    fdw = 28
-    fw = 7
-
-    x_train, y_train, x_test, y_test = simple_seq_data(
-        nrows=1000, freq="1H", fdw=fdw, fw=fw, test_size=0.2
-    )
-
-    inputs = keras.Input(shape=(fdw, 1))
-    outputs = keras.layers.Reshape((fdw,))(inputs)
-    _, forecast = SeasonalBlock(
-        fdw=fdw,
-        fw=fw,
-        stack_id=0,
-        units=8,
-        theta_units=8,
-        kernel_initializer=get_initializer("glorot_uniform", RANDOM_SEED),
-    )(outputs)
-    model = keras.Model(inputs=inputs, outputs=forecast)
-
-    model.compile(
-        optimizer=keras.optimizers.Adam(0.01), loss=keras.losses.MeanSquaredError()
-    )
-    model.fit(x_train, y_train, epochs=5, batch_size=32, shuffle=False)
-
-    y_pred = model.predict(x_test)
-    assert np.all(np.isfinite(y_pred))
-    error = rmse(y_test, y_pred)
-    assert error < 0.35
+    assert error < expected_rmse
