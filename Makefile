@@ -13,6 +13,14 @@ test: flake
 	py.test -vv $(FLAGS) ./tests/
 
 
+test-transformer: flake
+	py.test -vv $(FLAGS) ./tests/transformer/
+
+
+test-nbeats: flake
+	py.test -vv $(FLAGS) ./tests/nbeats/
+
+
 mypy:
 	mypy time_series_experiments --ignore-missing-imports --disallow-untyped-calls --no-site-packages --strict
 
