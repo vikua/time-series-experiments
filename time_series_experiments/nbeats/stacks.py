@@ -5,37 +5,6 @@ from tensorflow import keras
 from .blocks import BLOCKS
 
 
-class StackDef(object):
-    def __init__(
-        self,
-        stack_type,
-        block_types,
-        block_units,
-        block_theta_units,
-        block_layers,
-        block_activation="relu",
-        block_kernel_initializer="glorot_uniform",
-        block_bias_initializer="zeros",
-        block_kernel_regularizer=None,
-        block_bias_regularizer=None,
-        block_activity_regularizer=None,
-        block_kernel_constraint=None,
-        block_bias_constraint=None,
-    ):
-        self.stack_type = stack_type
-        self.block_types = block_types
-        self.block_units = block_units
-        self.block_theta_units = block_theta_units
-        self.block_layers = block_layers
-        self.block_activation = block_activation
-        self.block_kernel_initializer = block_kernel_initializer
-        self.block_bias_initializer = block_bias_initializer
-        self.block_kernel_regularizer = block_kernel_regularizer
-        self.block_bias_regularizer = block_bias_regularizer
-        self.block_kernel_constraint = block_kernel_constraint
-        self.block_bias_constraint = block_bias_constraint
-
-
 class Stack(keras.layers.Layer):
     def __init__(
         self,
@@ -51,7 +20,6 @@ class Stack(keras.layers.Layer):
         block_bias_initializer="zeros",
         block_kernel_regularizer=None,
         block_bias_regularizer=None,
-        block_activity_regularizer=None,
         block_kernel_constraint=None,
         block_bias_constraint=None,
         **kwargs
@@ -245,6 +213,51 @@ class ResidualInputStack(Stack):
                 forecast += f
 
         return backcast, forecast
+
+
+class StackDef(object):
+    def __init__(
+        self,
+        stack_type,
+        block_types,
+        block_units,
+        block_theta_units,
+        block_layers=4,
+        block_activation="relu",
+        block_kernel_initializer="glorot_uniform",
+        block_bias_initializer="zeros",
+        block_kernel_regularizer=None,
+        block_bias_regularizer=None,
+        block_kernel_constraint=None,
+        block_bias_constraint=None,
+    ):
+        self.stack_type = stack_type
+        self.block_types = block_types
+        self.block_units = block_units
+        self.block_theta_units = block_theta_units
+        self.block_layers = block_layers
+        self.block_activation = block_activation
+        self.block_kernel_initializer = block_kernel_initializer
+        self.block_bias_initializer = block_bias_initializer
+        self.block_kernel_regularizer = block_kernel_regularizer
+        self.block_bias_regularizer = block_bias_regularizer
+        self.block_kernel_constraint = block_kernel_constraint
+        self.block_bias_constraint = block_bias_constraint
+
+    def get_args(self):
+        return {
+            "block_types": self.block_types,
+            "block_units": self.block_units,
+            "block_theta_units": self.block_theta_units,
+            "block_layers": self.block_layers,
+            "block_activation": self.block_activation,
+            "block_kernel_initializer": self.block_kernel_initializer,
+            "block_bias_initializer": self.block_bias_initializer,
+            "block_kernel_regularizer": self.block_kernel_regularizer,
+            "block_bias_regularizer": self.block_bias_regularizer,
+            "block_kernel_constraint": self.block_kernel_constraint,
+            "block_bias_constraint": self.block_bias_constraint,
+        }
 
 
 class StackTypes(Enum):
