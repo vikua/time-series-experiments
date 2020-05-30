@@ -204,13 +204,13 @@ class TransformerEncoder(object):
 
         outputs = self.dropout(outputs)
 
-        attention_weighs = {}
+        attention_weighs = []
 
         for i in range(self.num_layers):
             outputs, weights = self.encoder_layers[i](
                 outputs, padding_mask=padding_mask
             )
-            attention_weighs["enc_layer_{}".format(i)] = weights
+            attention_weighs.append(weights)
 
         return outputs, attention_weighs
 
@@ -260,8 +260,8 @@ class TransformerDecoder(object):
 
         outputs = self.dropout(outputs)
 
-        dec_attention_weights = {}
-        enc_dec_attention_weights = {}
+        dec_attention_weights = []
+        enc_dec_attention_weights = []
 
         for i in range(self.num_layers):
             outputs, dec_weights, enc_dec_weights = self.decoder_layers[i](
@@ -270,7 +270,7 @@ class TransformerDecoder(object):
                 padding_mask=padding_mask,
                 lookahead_mask=lookahead_mask,
             )
-            dec_attention_weights["dec_layer_{}".format(i)] = dec_weights
-            enc_dec_attention_weights["enc_dec_layer_{}".format(i)] = enc_dec_weights
+            dec_attention_weights.append(dec_weights)
+            enc_dec_attention_weights.append(enc_dec_weights)
 
         return outputs, dec_attention_weights, enc_dec_attention_weights

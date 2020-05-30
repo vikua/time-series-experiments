@@ -132,15 +132,14 @@ class Transformer(object):
         y_pred = np.empty((X.shape[0], self.fw,))
         decoder_inputs = np.full((X.shape[0], 1, 1), self.go_token, dtype=np.float)
 
-        encoder_outputs = self.encoder_model.predict(X)
-        encoder_attention = encoder_outputs[1:]
-        encoder_outputs = encoder_outputs[0]
+        encoder_outputs, encoder_attention = self.encoder_model.predict(X)
 
         for step in range(self.fw):
-            output = self.decoder_model.predict([encoder_outputs, decoder_inputs])
-            pred = output[0]
-            decoder_attention = output[1 : 1 + self.num_layers]
-            decoder_encoder_attention = output[-self.num_layers :]
+            (
+                pred,
+                decoder_attention,
+                decoder_encoder_attention,
+            ) = self.decoder_model.predict([encoder_outputs, decoder_inputs])
 
             last_pred = pred[:, -1, :]
             y_pred[:, step] = last_pred.ravel()

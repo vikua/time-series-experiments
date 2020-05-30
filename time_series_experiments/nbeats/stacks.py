@@ -1,13 +1,39 @@
+from enum import Enum
+
 from tensorflow import keras
 
-from .blocks import BlockTypes, GenericBlock, TrendBlock, SeasonalBlock
+from .blocks import BLOCKS
 
 
-BLOCKS = {
-    BlockTypes.GENERIC: GenericBlock,
-    BlockTypes.TREND: TrendBlock,
-    BlockTypes.SEASONAL: SeasonalBlock,
-}
+class StackDef(object):
+    def __init__(
+        self,
+        stack_type,
+        block_types,
+        block_units,
+        block_theta_units,
+        block_layers,
+        block_activation="relu",
+        block_kernel_initializer="glorot_uniform",
+        block_bias_initializer="zeros",
+        block_kernel_regularizer=None,
+        block_bias_regularizer=None,
+        block_activity_regularizer=None,
+        block_kernel_constraint=None,
+        block_bias_constraint=None,
+    ):
+        self.stack_type = stack_type
+        self.block_types = block_types
+        self.block_units = block_units
+        self.block_theta_units = block_theta_units
+        self.block_layers = block_layers
+        self.block_activation = block_activation
+        self.block_kernel_initializer = block_kernel_initializer
+        self.block_bias_initializer = block_bias_initializer
+        self.block_kernel_regularizer = block_kernel_regularizer
+        self.block_bias_regularizer = block_bias_regularizer
+        self.block_kernel_constraint = block_kernel_constraint
+        self.block_bias_constraint = block_bias_constraint
 
 
 class Stack(keras.layers.Layer):
@@ -219,3 +245,22 @@ class ResidualInputStack(Stack):
                 forecast += f
 
         return backcast, forecast
+
+
+class StackTypes(Enum):
+    NBEATS_DRESS = 0
+    PARALLEL = 1
+    NO_RESIDUAL = 2
+    LAST_FORWARD = 3
+    NO_RESIDUAL_LAST_FORWARD = 4
+    RESIDUAL_INPUT = 5
+
+
+STACKS = {
+    StackTypes.NBEATS_DRESS: DRESSStack,
+    StackTypes.PARALLEL: ParallelStack,
+    StackTypes.NO_RESIDUAL: NoResidualStack,
+    StackTypes.LAST_FORWARD: LastForwardStack,
+    StackTypes.NO_RESIDUAL_LAST_FORWARD: NoResidualLastForwardStack,
+    StackTypes.RESIDUAL_INPUT: ResidualInputStack,
+}

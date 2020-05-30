@@ -6,12 +6,6 @@ from tensorflow import keras
 from tensorflow.keras import backend as K
 
 
-class BlockTypes(Enum):
-    GENERIC = 1
-    TREND = 2
-    SEASONAL = 3
-
-
 class Block(keras.layers.Layer):
     def __init__(
         self,
@@ -255,3 +249,16 @@ class SeasonalBlock(Block):
         config = super(SeasonalBlock, self).get_config()
         config.update({"fdw": self.fdw, "fw": self.fw})
         return config
+
+
+class BlockTypes(Enum):
+    GENERIC = 1
+    TREND = 2
+    SEASONAL = 3
+
+
+BLOCKS = {
+    BlockTypes.GENERIC: GenericBlock,
+    BlockTypes.TREND: TrendBlock,
+    BlockTypes.SEASONAL: SeasonalBlock,
+}
