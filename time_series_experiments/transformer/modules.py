@@ -6,7 +6,7 @@ from .layers import (
 )
 
 
-class PositionWiseFeedForwardNetwork(object):
+class PositionWiseFeedForwardNetwork(keras.Model):
     def __init__(
         self,
         d_model,
@@ -15,6 +15,7 @@ class PositionWiseFeedForwardNetwork(object):
         bias_initializer="zeros",
         activation=keras.activations.relu,
     ):
+        super(PositionWiseFeedForwardNetwork, self).__init__()
         self.dense_1 = keras.layers.Dense(
             dff,
             kernel_initializer=kernel_initializer,
@@ -34,7 +35,7 @@ class PositionWiseFeedForwardNetwork(object):
         return outputs
 
 
-class TransformerEncoderLayer(object):
+class TransformerEncoderLayer(keras.Model):
     def __init__(
         self,
         attention_dim,
@@ -45,6 +46,8 @@ class TransformerEncoderLayer(object):
         layer_norm_epsilon=0.001,
         dropout_rate=0.0,
     ):
+        super(TransformerEncoderLayer, self).__init__()
+
         self.mha = MultiHeadAttention(
             attention_dim=attention_dim,
             num_heads=num_heads,
@@ -87,7 +90,7 @@ class TransformerEncoderLayer(object):
         return outputs, encoder_self_attention
 
 
-class TransformerDecoderLayer(object):
+class TransformerDecoderLayer(keras.Model):
     def __init__(
         self,
         attention_dim,
@@ -98,6 +101,8 @@ class TransformerDecoderLayer(object):
         layer_norm_epsilon=0.001,
         dropout_rate=0.0,
     ):
+        super(TransformerDecoderLayer, self).__init__()
+
         self.mha1 = MultiHeadAttention(
             attention_dim=attention_dim,
             num_heads=num_heads,
@@ -159,7 +164,7 @@ class TransformerDecoderLayer(object):
         return outputs, decoder_self_attention, encoder_decoder_attention
 
 
-class TransformerEncoder(object):
+class TransformerEncoder(keras.Model):
     def __init__(
         self,
         num_layers,
@@ -173,6 +178,8 @@ class TransformerEncoder(object):
         layer_norm_epsilon=0.001,
         dropout_rate=0.0,
     ):
+        super(TransformerEncoder, self).__init__()
+
         self.num_layers = num_layers
 
         self.hidden = keras.layers.Dense(
@@ -215,7 +222,7 @@ class TransformerEncoder(object):
         return outputs, attention_weighs
 
 
-class TransformerDecoder(object):
+class TransformerDecoder(keras.Model):
     def __init__(
         self,
         num_layers,
@@ -229,6 +236,8 @@ class TransformerDecoder(object):
         layer_norm_epsilon=0.001,
         dropout_rate=0.0,
     ):
+        super(TransformerDecoder, self).__init__()
+
         self.num_layers = num_layers
 
         self.hidden = keras.layers.Dense(
