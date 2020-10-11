@@ -2,11 +2,11 @@ FLAGS=
 
 
 black:
-	black time_series_experiments tests setup.py
+	black time_series_experiments tests examples setup.py
 
 
 flake:
-	flake8 time_series_experiments tests setup.py
+	flake8 time_series_experiments tests examples setup.py
 
 
 test: flake
