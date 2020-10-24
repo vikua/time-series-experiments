@@ -379,13 +379,15 @@ def process_favorita(config):
         )
 
     # Unpack main zip file
-    outputs_file = os.path.join(data_folder, "train.csv.7z")
+    output_folder = os.path.join(data_folder,"favorita-grocery-sales-forecasting")
+    outputs_file = os.path.join(output_folder, "train.csv.7z")
     unzip(zip_file, outputs_file, data_folder)
 
     # Unpack individually zipped files
-    for file in glob.glob(os.path.join(data_folder, "*.7z")):
-        csv_file = file.replace(".7z", "")
-        unzip(file, csv_file, data_folder)
+    for fl in glob.glob(os.path.join(output_folder, "*.7z")):
+        _, file_name = os.path.split(fl.replace(".7z", ""))
+        csv_file = os.path.join(data_folder, file_name)
+        unzip(fl, csv_file, data_folder)
 
     print("Unzipping complete, commencing data processing...")
 
@@ -456,6 +458,7 @@ def process_favorita(config):
     print("Adding oil")
     oil.name = "oil"
     oil.index = pd.to_datetime(oil.index)
+    oil = oil.reindex(dates)
     temporal = temporal.join(
         oil.loc[dates].fillna(method="ffill"), on="date", how="left"
     )
