@@ -379,7 +379,7 @@ def process_favorita(config):
         )
 
     # Unpack main zip file
-    output_folder = os.path.join(data_folder,"favorita-grocery-sales-forecasting")
+    output_folder = os.path.join(data_folder, "favorita-grocery-sales-forecasting")
     outputs_file = os.path.join(output_folder, "train.csv.7z")
     unzip(zip_file, outputs_file, data_folder)
 
