@@ -4,6 +4,7 @@ from ._data import (
     create_decoder_inputs,
     compute_backtests,
     TimeSeriesCrossVal,
+    TimeSeriesSequence
 )
 
 
@@ -13,4 +14,5 @@ __all__ = [
     "create_decoder_inputs",
     "compute_backtests",
     "TimeSeriesCrossVal",
+    "TimeSeriesSequence",
 ]

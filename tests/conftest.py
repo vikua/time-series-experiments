@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from time_series_experiments.utils import train_test_split_index
+from time_series_experiments.utils.data import train_test_split_index
 
 
 RANDOM_SEED = 0xC0FFEE

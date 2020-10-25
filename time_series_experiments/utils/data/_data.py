@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import numpy as np
+import tensorflow as tf
 
 
 def sliding_window(arr, window_size):
@@ -85,7 +86,27 @@ def compute_backtests(start, end, k=2, validation_size=0.2):
 
 
 class TimeSeriesCrossVal(object):
+    """ Creates backtesting partitions for time series data.
+    Returns indexes of X and y for both train and tests subsets of single backtests.
+
+    Parameters
+    ----------
+    data : pd.Series
+        dates series from original dataset
+    fdw : int
+        feature derivation window
+    fw : int
+        forecast window
+    k : int
+        number of partitions (backtests)
+    validation_size : float
+        percent of data to use for validaton. This percent is taken from the whole dataset and
+        and then split between different backtests, thus if number of backtests is 3 and
+        validation_size is 0.2, each backtest gets 0.2 / 3 fraction of whole dataset.
+    """
     def __init__(self, data, fdw, fw, k=2, validation_size=0.2):
+        if k == 0:
+            raise ValueError("k can't be 0")
         self._data = data
         self._fdw = fdw
         self._fw = fw
@@ -97,6 +118,10 @@ class TimeSeriesCrossVal(object):
         self._y_idx = None
 
         self._initialize()
+
+    @property
+    def backtests(self):
+        return self._backtests
 
     def _compute_partitions(self):
         start = self._data.min()
@@ -124,11 +149,12 @@ class TimeSeriesCrossVal(object):
 
         bt = self._backtests[i]
         start_dates = self._data[self._x_idx[:, 0]]
+        end_dates = self._data[self._y_idx[:, -1]]
         train_mask = (start_dates >= bt["train_start"]) & (
-            start_dates <= bt["validation_start"]
+            end_dates <= bt["validation_start"]
         )
         test_mask = (start_dates >= bt["validation_start"]) & (
-            start_dates <= bt["validation_end"]
+            end_dates <= bt["validation_end"]
         )
         x_train = self._x_idx[train_mask]
         y_train = self._y_idx[train_mask]
@@ -139,3 +165,23 @@ class TimeSeriesCrossVal(object):
     def __iter__(self):
         for i in range(self._k):
             yield self[i]
+
+
+class TimeSeriesSequence(tf.keras.utils.Sequence):
+    def __init__(self, data, x_idx, y_idx, batch_size=128):
+        self._data = data
+        self._x_idx = x_idx
+        self._y_idx = y_idx
+        self._batch_size = batch_size
+
+    def __len__(self):
+        return int(np.ceil(self._x_idx.shape[0] / float(self._batch_size)))
+
+    def __getitem__(self, i):
+        start = i * self._batch_size
+        end = start + self._batch_size
+
+        batch_x = self._x_idx[start:end]
+        batch_y = self._y_idx[start:end]
+
+        return self._data[batch_x], self._data[batch_y]
