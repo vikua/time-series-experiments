@@ -10,7 +10,7 @@ from time_series_experiments.transformer.layers import (
     PositionalEncoding,
 )
 from time_series_experiments.utils import get_initializer
-from time_series_experiments.utils import rmse
+from time_series_experiments.utils.metrics import rmse
 
 from ..conftest import simple_seq_data, RANDOM_SEED
 

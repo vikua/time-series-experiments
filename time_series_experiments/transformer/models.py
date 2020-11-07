@@ -3,7 +3,7 @@ from tensorflow import keras
 
 from .modules import TransformerEncoder, TransformerDecoder
 from .layers import PaddingLookAheadMask
-from ..utils import create_decoder_inputs
+from ..utils.data import create_decoder_inputs
 
 
 class Transformer(object):

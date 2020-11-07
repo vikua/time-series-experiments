@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-from time_series_experiments.utils import NoOpScaler, ScalerWrapper
+from time_series_experiments.utils.scalers import NoOpScaler, ScalerWrapper
 from ..conftest import RANDOM_SEED
 
 
