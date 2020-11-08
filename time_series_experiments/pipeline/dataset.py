@@ -3,7 +3,7 @@ from enum import Enum
 
 import attr
 import pandas as pd
-from dateutil.parser import parse
+import ciso8601
 
 
 class VarType(Enum):
@@ -31,5 +31,5 @@ class DatasetConfig(object):
 
 def read_dataset(config: DatasetConfig) -> pd.DataFrame:
     df = pd.read_csv(config.path)
-    df[config.date_col] = df[config.date_col].apply(lambda x: parse(x))
+    df[config.date_col] = df[config.date_col].apply(lambda x: ciso8601.parse_datetime(x))
     return df
