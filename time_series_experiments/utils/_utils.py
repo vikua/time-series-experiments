@@ -22,6 +22,10 @@ def create_decoder_inputs(y, go_token=0):
     return decoder_inputs
 
 
+def create_empty_decoder_inputs(size, go_token=0):
+    return np.full((size, 1, 1), go_token, dtype=np.float)
+
+
 def train_test_split_index(
     size, fdw_steps, fw_steps, test_size, random_seed, shuffle_train=True
 ):

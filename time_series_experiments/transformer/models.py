@@ -1,12 +1,12 @@
-import numpy as np
+import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras import backend as K
 
 from .modules import TransformerEncoder, TransformerDecoder
 from .layers import PaddingLookAheadMask
-from ..utils import create_decoder_inputs
 
 
-class Transformer(object):
+class Transformer(keras.Model):
     def __init__(
         self,
         num_layers,
@@ -20,136 +20,90 @@ class Transformer(object):
         output_kernel_initializer="glorot_uniform",
         layer_norm_epsilon=0.001,
         dropout_rate=0.0,
-        batch_size=32,
-        epochs=1,
-        loss="mse",
-        optimizer="sgd",
-        go_token=0,
     ):
-        self.num_layers = num_layers
-        self.attention_dim = attention_dim
-        self.num_heads = num_heads
-        self.dff = dff
-        self.hidden_activation = hidden_activation
-        self.hidden_kernel_initializer = hidden_kernel_initializer
-        self.attention_kernel_initializer = attention_kernel_initializer
-        self.pwffn_kernel_initializer = pwffn_kernel_initializer
-        self.output_kernel_initializer = output_kernel_initializer
-        self.layer_norm_epsilon = layer_norm_epsilon
-        self.dropout_rate = dropout_rate
+        super(Transformer, self).__init__()
 
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.loss = loss
-        self.optimizer = optimizer
-        self.go_token = go_token
+        self.encoder = TransformerEncoder(
+            num_layers=num_layers,
+            attention_dim=attention_dim,
+            num_heads=num_heads,
+            hidden_activation=hidden_activation,
+            dff=dff,
+            hidden_kernel_initializer=hidden_kernel_initializer,
+            attention_kernel_initializer=attention_kernel_initializer,
+            pwffn_kernel_initializer=pwffn_kernel_initializer,
+            layer_norm_epsilon=layer_norm_epsilon,
+            dropout_rate=dropout_rate,
+        )
+        self.lookahead_mask_layer = PaddingLookAheadMask()
+        self.decoder = TransformerDecoder(
+            num_layers=num_layers,
+            attention_dim=attention_dim,
+            num_heads=num_heads,
+            hidden_activation=hidden_activation,
+            attention_kernel_initializer=attention_kernel_initializer,
+            pwffn_kernel_initializer=pwffn_kernel_initializer,
+            layer_norm_epsilon=layer_norm_epsilon,
+            dropout_rate=dropout_rate,
+        )
+        self.final_layer = keras.layers.Dense(
+            1, kernel_initializer=output_kernel_initializer, activation="linear"
+        )
 
-        self.fwd = None
-        self.input_dim = None
         self.fw = None
-        self.output_dim = None
 
-        self.model = None
-
-    def build_model(self):
-        inputs = keras.Input(shape=(self.fwd, self.input_dim), name="inputs")
-        targets = keras.Input(shape=(None, self.output_dim), name="targets")
-
-        encoder_outputs_inputs = keras.Input(
-            shape=(self.fdw, self.attention_dim * self.num_heads),
-            name="encoder_outputs_inputs",
+    def __call__(self, inputs):
+        encoder_inputs, decoder_inputs = inputs
+        encoder_outputs, encoder_attention = self.encoder(encoder_inputs)
+        lookahead_mask = self.lookahead_mask_layer(decoder_inputs)
+        outputs, _, _ = self.decoder(
+            decoder_inputs, encoder_outputs, lookahead_mask=lookahead_mask
         )
+        return self.final_layer(outputs)
 
-        encoder_outputs, encoder_attention = TransformerEncoder(
-            num_layers=self.num_layers,
-            attention_dim=self.attention_dim,
-            num_heads=self.num_heads,
-            hidden_activation=self.hidden_activation,
-            dff=self.dff,
-            hidden_kernel_initializer=self.hidden_kernel_initializer,
-            attention_kernel_initializer=self.attention_kernel_initializer,
-            pwffn_kernel_initializer=self.pwffn_kernel_initializer,
-            layer_norm_epsilon=self.layer_norm_epsilon,
-            dropout_rate=self.dropout_rate,
-        )(inputs)
+    def train_step(self, inputs):
+        x, y = inputs
 
-        lookahead_mask = PaddingLookAheadMask()(targets)
+        self.fw = K.int_shape(y)[1]
 
-        decoder = TransformerDecoder(
-            num_layers=self.num_layers,
-            attention_dim=self.attention_dim,
-            num_heads=self.num_heads,
-            hidden_activation=self.hidden_activation,
-            dff=self.dff,
-            hidden_kernel_initializer=self.hidden_kernel_initializer,
-            attention_kernel_initializer=self.attention_kernel_initializer,
-            pwffn_kernel_initializer=self.pwffn_kernel_initializer,
-            layer_norm_epsilon=self.layer_norm_epsilon,
-            dropout_rate=self.dropout_rate,
-        )
-        outputs, _, _ = decoder(targets, encoder_outputs, lookahead_mask=lookahead_mask)
+        with tf.GradientTape() as tape:
+            outputs = self(x)
+            loss = self.compiled_loss(y, outputs, regularization_losses=self.losses)
 
-        final_layer = keras.layers.Dense(
-            self.output_dim,
-            kernel_initializer=self.output_kernel_initializer,
-            activation="linear",
-        )
-        outputs = final_layer(outputs)
+        trainable_vars = self.trainable_variables
+        grads = tape.gradient(loss, trainable_vars)
+        # grads = [tf.clip_by_value(grad, -1., 1.) for grad in grads]
+        self.optimizer.apply_gradients(zip(grads, trainable_vars))
+        self.compiled_metrics.update_state(y, outputs)
+        return {m.name: m.result() for m in self.metrics}
 
-        self.model = keras.Model(inputs=[inputs, targets], outputs=outputs)
-        self.encoder_model = keras.Model(
-            inputs=inputs, outputs=[encoder_outputs, encoder_attention]
-        )
+    def test_step(self, inputs):
+        x, y = inputs
+        outputs = self(x)
+        self.compiled_loss(y, outputs, regularization_losses=self.losses)
+        self.compiled_metrics.update_state(y, outputs)
+        return {m.name: m.result() for m in self.metrics}
 
-        outputs, decoder_attention, encoder_decoder_attention = decoder(
-            targets, encoder_outputs_inputs, lookahead_mask=lookahead_mask
-        )
-        outputs = final_layer(outputs)
-        self.decoder_model = keras.Model(
-            inputs=[encoder_outputs_inputs, targets],
-            outputs=[outputs, decoder_attention, encoder_decoder_attention],
-        )
+    def predict_step(self, inputs):
+        x, decoder_inputs = inputs[0]
+        encoder_outputs, encoder_attention = self.encoder(x)
 
-    def fit(self, X, y, **kwargs):
-        self.fdw, self.input_dim = X.shape[1], X.shape[2]
-        self.fw = y.shape[1]
-        self.output_dim = 1
-
-        self.build_model()
-        self.model.compile(optimizer=self.optimizer, loss=self.loss)
-
-        decoder_inputs = create_decoder_inputs(y, go_token=self.go_token)
-
-        return self.model.fit(
-            [X, decoder_inputs],
-            y,
-            epochs=self.epochs,
-            batch_size=self.batch_size,
-            **kwargs
-        )
-
-    def predict(self, X, **kwargs):
-        y_pred = np.empty((X.shape[0], self.fw,))
-        decoder_inputs = np.full((X.shape[0], 1, 1), self.go_token, dtype=np.float)
-
-        encoder_outputs, encoder_attention = self.encoder_model.predict(X)
-
+        all_outputs = []
         for step in range(self.fw):
-            (
-                pred,
-                decoder_attention,
-                decoder_encoder_attention,
-            ) = self.decoder_model.predict([encoder_outputs, decoder_inputs])
-
-            last_pred = pred[:, -1, :]
-            y_pred[:, step] = last_pred.ravel()
-            decoder_inputs = np.concatenate(
-                [decoder_inputs, np.expand_dims(last_pred, 1)], axis=1
+            lookahead_mask = self.lookahead_mask_layer(decoder_inputs)
+            outputs, decoder_attention, encoder_decoder_attention = self.decoder(
+                decoder_inputs, encoder_outputs, lookahead_mask=lookahead_mask
             )
-
+            outputs = self.final_layer(outputs)
+            last_step = outputs[:, -1, :]
+            all_outputs.append(last_step)
+            decoder_inputs = tf.concat(
+                [decoder_inputs, tf.expand_dims(last_step, axis=-1)], axis=1
+            )
+        pred = tf.concat(all_outputs, axis=1)
         weights = {
             "encoder_attention": encoder_attention,
             "decoder_attention": decoder_attention,
-            "decoder_encoder_attention": decoder_encoder_attention,
+            "encoder_decoder_attention": encoder_decoder_attention,
         }
-        return y_pred, weights
+        return pred, weights

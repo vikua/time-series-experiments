@@ -47,7 +47,7 @@ class BacktestingCrossVal(object):
         config: DatasetConfig,
         k: int,
         validation_size: float,
-        shuffle_train: bool = True,
+        shuffle_train: bool = False,
     ):
         self._data = data
         self._config = config
