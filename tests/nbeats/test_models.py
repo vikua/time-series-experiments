@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from time_series_experiments.nbeats.blocks import BlockTypes
 from time_series_experiments.nbeats.stacks import StackDef, StackTypes
-from time_series_experiments.nbeats.models import (
+from time_series_experiments.nbeats import (
     NBEATS,
     NBEATSLastForward,
     NBEATSResidual,

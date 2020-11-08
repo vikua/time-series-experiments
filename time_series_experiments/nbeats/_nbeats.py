@@ -14,7 +14,7 @@ class BaseModel(keras.Model):
 
         for i, stack_def in enumerate(self.stacks):
             stack_cls = STACKS[stack_def.stack_type]
-            stack = stack_cls(fdw=fdw, fw=fw, **stack_def.get_args())
+            stack = stack_cls(fdw=fdw, fw=fw, **stack_def.get_params())
             setattr(self, "stack_{}".format(i), stack)
 
 
