@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 
 from .dataset import DatasetConfig
-from ..utils.data import sliding_window
 
 
 def compute_backtests(
@@ -37,10 +36,8 @@ def compute_backtests(
 class Backtest(object):
     backtest_number: int = attr.ib()
     backtest_config: Dict[str, datetime] = attr.ib()
-    x_train_index: np.ndarray = attr.ib()
-    y_train_index: np.ndarray = attr.ib()
-    x_test_index: np.ndarray = attr.ib()
-    y_test_index: np.ndarray = attr.ib()
+    train_index: np.ndarray = attr.ib()
+    test_index: np.ndarray = attr.ib()
 
 
 class BacktestingCrossVal(object):
@@ -48,16 +45,12 @@ class BacktestingCrossVal(object):
         self,
         data: pd.DataFrame,
         config: DatasetConfig,
-        forecast_horizon: int,
-        feature_derivation_window: int,
         k: int,
         validation_size: float,
         shuffle_train: bool = True,
     ):
         self._data = data
         self._config = config
-        self._forecast_horizon = forecast_horizon
-        self._feature_derivation_window = feature_derivation_window
         self._k = k
         self._validation_size = validation_size
 
@@ -77,17 +70,6 @@ class BacktestingCrossVal(object):
         self._backtests = compute_backtests(start, end, self._k, self._validation_size)
         return self._backtests
 
-    @property
-    def sliding_index(self) -> np.ndarray:
-        if self._sliding_index is not None:
-            return self._sliding_index
-
-        self._sliding_index = sliding_window(
-            np.arange(self._data.shape[0]),
-            self._forecast_horizon + self._feature_derivation_window,
-        )
-        return self._sliding_index
-
     def __getitem__(self, i) -> Backtest:
         if i >= self._k:
             raise IndexError(
@@ -96,25 +78,20 @@ class BacktestingCrossVal(object):
 
         bt = self.backtests[i]
         dates = self._data[self._config.date_col]
-        x_idx = self.sliding_index[:, : self._feature_derivation_window]
-        y_idx = self.sliding_index[:, self._feature_derivation_window :]
 
-        start_dates = dates[x_idx[:, 0]]
-        end_dates = dates[y_idx[:, -1]]
+        idx = np.arange(dates.shape[0])
 
-        train_mask = (start_dates >= bt["train_start"]).values & (
-            end_dates <= bt["validation_start"]
+        train_mask = (dates >= bt["train_start"]).values & (
+            dates <= bt["validation_start"]
         ).values
-        test_mask = (start_dates >= bt["validation_start"]).values & (
-            end_dates <= bt["validation_end"]
+        test_mask = (dates >= bt["validation_start"]).values & (
+            dates <= bt["validation_end"]
         ).values
 
-        x_train = x_idx[train_mask]
-        y_train = y_idx[train_mask]
-        x_test = x_idx[test_mask]
-        y_test = y_idx[test_mask]
+        train_index = idx[train_mask]
+        test_index = idx[test_mask]
 
-        return Backtest(i, bt, x_train, y_train, x_test, y_test)
+        return Backtest(i, bt, train_index, test_index)
 
     def __iter__(self):
         for i in range(self._k):

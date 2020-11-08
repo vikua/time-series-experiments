@@ -16,7 +16,7 @@ from time_series_experiments.transformer.layers import PaddingLookAheadMask
 
 from time_series_experiments.utils import get_initializer
 from time_series_experiments.utils.metrics import rmse
-from time_series_experiments.utils.data import create_decoder_inputs
+from time_series_experiments.utils import create_decoder_inputs
 
 from ..conftest import simple_seq_data, RANDOM_SEED
 

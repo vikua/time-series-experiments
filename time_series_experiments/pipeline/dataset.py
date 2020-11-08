@@ -1,6 +1,7 @@
 from typing import Dict
 from enum import Enum
 
+import numpy as np
 import attr
 import pandas as pd
 import ciso8601
@@ -31,5 +32,32 @@ class DatasetConfig(object):
 
 def read_dataset(config: DatasetConfig) -> pd.DataFrame:
     df = pd.read_csv(config.path)
-    df[config.date_col] = df[config.date_col].apply(lambda x: ciso8601.parse_datetime(x))
+    df[config.date_col] = df[config.date_col].apply(
+        lambda x: ciso8601.parse_datetime(x)
+    )
     return df
+
+
+def sliding_window(arr, window_size):
+    """ Takes and arr and reshapes it into 2D matrix
+
+    Parameters
+    ----------
+    arr: np.ndarray
+        array to reshape
+    window_size: int
+        sliding window size
+
+    Returns
+    -------
+    new_arr: np.ndarray
+        2D matrix of shape (arr.shape[0] - window_size + 1, window_size)
+    """
+    (stride,) = arr.strides
+    arr = np.lib.index_tricks.as_strided(
+        arr,
+        (arr.shape[0] - window_size + 1, window_size),
+        strides=[stride, stride],
+        writeable=False,
+    )
+    return arr

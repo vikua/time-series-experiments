@@ -16,8 +16,6 @@ def test_time_series_cross_validation_backtests(data):
     cross_val = BacktestingCrossVal(
         data=data,
         config=DatasetConfig("", "date", "", "", {}),
-        forecast_horizon=24,
-        feature_derivation_window=168,
         k=3,
         validation_size=0.3,
     )
@@ -47,8 +45,6 @@ def test_time_series_cross_validion(data, k):
     cross_val = BacktestingCrossVal(
         data=data,
         config=DatasetConfig("", "date", "", "", {}),
-        forecast_horizon=24,
-        feature_derivation_window=168,
         k=k,
         validation_size=0.3,
     )
@@ -58,22 +54,14 @@ def test_time_series_cross_validion(data, k):
         assert backtest.backtest_number == i
         assert backtest.backtest_config == cross_val.backtests[i]
 
-        x_train = backtest.x_train_index
-        y_train = backtest.y_train_index
-        x_test = backtest.x_test_index
-        y_test = backtest.y_test_index
+        train_index = backtest.train_index
+        test_index = backtest.test_index
 
-        assert dates[x_train].min() >= backtest.backtest_config["train_start"]
-        assert dates[x_train].max() <= backtest.backtest_config["validation_start"]
+        assert dates[train_index].min() >= backtest.backtest_config["train_start"]
+        assert dates[train_index].max() <= backtest.backtest_config["validation_start"]
 
-        assert dates[y_train].min() >= backtest.backtest_config["train_start"]
-        assert dates[y_train].max() <= backtest.backtest_config["validation_start"]
-
-        assert dates[x_test].min() >= backtest.backtest_config["validation_start"]
-        assert dates[x_test].max() <= backtest.backtest_config["validation_end"]
-
-        assert dates[y_test].min() >= backtest.backtest_config["validation_start"]
-        assert dates[y_test].max() <= backtest.backtest_config["validation_end"]
+        assert dates[test_index].min() >= backtest.backtest_config["validation_start"]
+        assert dates[test_index].max() <= backtest.backtest_config["validation_end"]
 
 
 @pytest.mark.parametrize("k", [1, 3, 5])
@@ -81,26 +69,16 @@ def test_time_series_cross_val_interable(data, k):
     cross_val = BacktestingCrossVal(
         data=data,
         config=DatasetConfig("", "date", "", "", {}),
-        forecast_horizon=24,
-        feature_derivation_window=168,
         k=k,
         validation_size=0.3,
     )
     dates = data["date"].values
     for backtest in cross_val:
-        x_train = backtest.x_train_index
-        y_train = backtest.y_train_index
-        x_test = backtest.x_test_index
-        y_test = backtest.y_test_index
+        train_index = backtest.train_index
+        test_index = backtest.test_index
 
-        assert dates[x_train].min() >= backtest.backtest_config["train_start"]
-        assert dates[x_train].max() <= backtest.backtest_config["validation_start"]
+        assert dates[train_index].min() >= backtest.backtest_config["train_start"]
+        assert dates[train_index].max() <= backtest.backtest_config["validation_start"]
 
-        assert dates[y_train].min() >= backtest.backtest_config["train_start"]
-        assert dates[y_train].max() <= backtest.backtest_config["validation_start"]
-
-        assert dates[x_test].min() >= backtest.backtest_config["validation_start"]
-        assert dates[x_test].max() <= backtest.backtest_config["validation_end"]
-
-        assert dates[y_test].min() >= backtest.backtest_config["validation_start"]
-        assert dates[y_test].max() <= backtest.backtest_config["validation_end"]
+        assert dates[test_index].min() >= backtest.backtest_config["validation_start"]
+        assert dates[test_index].max() <= backtest.backtest_config["validation_end"]
