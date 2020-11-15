@@ -1,8 +1,8 @@
 import numpy as np
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import OrdinalEncoder
+from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
 
-from time_series_experiments.pipeline.tasks import Wrap, TaskData, OrdCat
+from time_series_experiments.pipeline.tasks import Wrap, TaskData, OrdCat, OneHot
 
 
 def test_imputer_wrapper():
@@ -43,3 +43,29 @@ def test_ordcat_task():
 
     expected = OrdinalEncoder().fit_transform(data.X)
     assert np.all(np.isclose(res.X, expected))
+
+
+def test_onehot_task():
+    x1 = np.random.choice(["a", "b", "c"], size=1000)
+    x2 = np.random.choice(["1", "2", "3", "4", "5", "6"], size=1000)
+
+    x = np.hstack([np.reshape(x1, (-1, 1)), np.reshape(x2, (-1, 1))])
+    data = TaskData(X=x, column_names=["x1", "x2"], column_types=[0, 0])
+
+    task = OneHot()
+    res = task.fit_transform(data)
+    assert res.column_names == [
+        "x1_0",
+        "x1_1",
+        "x1_2",
+        "x2_0",
+        "x2_1",
+        "x2_2",
+        "x2_3",
+        "x2_4",
+        "x2_5",
+    ]
+    assert all([x == 0 for x in res.column_types])
+
+    expected = OneHotEncoder().fit_transform(data.X)
+    assert np.all(np.isclose(res.X.todense(), expected.todense()))
