@@ -5,7 +5,7 @@ import attr
 import numpy as np
 import pandas as pd
 
-from .dataset import DatasetConfig
+from .dataset import DatasetConfig, VarType
 
 
 @attr.s
@@ -14,6 +14,12 @@ class TaskMetadata(object):
     date_column = attr.ib(default=None)
     series_id_column = attr.ib(default=None)
     original_feature_types: Dict[str, Any] = attr.ib(default={})
+
+
+@attr.s
+class ColumnType(object):
+    var_type: VarType = attr.ib()
+    level: int = attr.ib(default=0)
 
 
 @attr.s
@@ -29,7 +35,16 @@ def to_task_data(
     X: pd.DataFrame, y: np.ndarray = None, config: DatasetConfig = None
 ) -> TaskData:
     column_names = X.columns.tolist()
-    column_types = [0 for _ in column_names]
+    column_types = [ColumnType(var_type=VarType.OBJ) for _ in column_names]
+
+    if config:
+        column_names = [c for c in column_names if c in config.feature_types]
+        column_types = [
+            ColumnType(config.feature_types.get(col, VarType.OBJ))
+            for col in column_names
+        ]
+        X = X[column_names]
+
     metadata = TaskMetadata(
         target_column=config.target_col if config else None,
         date_column=config.date_col if config else None,
@@ -45,11 +60,20 @@ def to_task_data(
     )
 
 
-def take_columns(data: TaskData, columns: List[str]) -> TaskData:
-    if not columns:
+def take_columns(
+    data: TaskData, columns: List[str] = None, types: List[VarType] = None
+) -> TaskData:
+    if not columns and not types:
         return data
 
-    indexes = [data.column_names.index(c) for c in columns]
+    if columns and types:
+        raise ValueError("columns and types cannot be used together")
+
+    if columns:
+        indexes = [data.column_names.index(c) for c in columns]
+    elif types:
+        types = set(types)
+        indexes = [i for i, c in enumerate(data.column_types) if c.var_type in types]
 
     column_names = [data.column_names[i] for i in indexes]
     column_types = [data.column_types[i] for i in indexes]

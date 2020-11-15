@@ -8,6 +8,7 @@ import ciso8601
 
 
 class VarType(Enum):
+    OBJ = 0
     NUM = 1
     CAT = 2
     TXT = 3

@@ -10,7 +10,8 @@ from time_series_experiments.pipeline.tasks import (
     OneHot,
     DateFeatures,
 )
-from time_series_experiments.pipeline.data import take_columns
+from time_series_experiments.pipeline.data import take_columns, ColumnType
+from time_series_experiments.pipeline.dataset import VarType
 
 
 def test_imputer_wrapper():
@@ -42,12 +43,19 @@ def test_ordcat_task():
     x2 = np.random.choice(["1", "2", "3", "4", "5", "6"], size=1000)
 
     x = np.hstack([np.reshape(x1, (-1, 1)), np.reshape(x2, (-1, 1))])
-    data = TaskData(X=x, column_names=["x1", "x2"], column_types=[0, 0])
+    data = TaskData(
+        X=x,
+        column_names=["x1", "x2"],
+        column_types=[ColumnType(VarType.NUM), ColumnType(VarType.NUM)],
+    )
 
     task = OrdCat()
     res = task.fit_transform(data)
     assert res.column_names == ["x1", "x2"]
-    assert res.column_types == [3, 6]
+    assert res.column_types == [
+        ColumnType(VarType.CAT, level=3),
+        ColumnType(VarType.CAT, level=6),
+    ]
 
     expected = OrdinalEncoder().fit_transform(data.X)
     assert np.all(np.isclose(res.X, expected))
@@ -58,7 +66,11 @@ def test_onehot_task():
     x2 = np.random.choice(["1", "2", "3", "4", "5", "6"], size=1000)
 
     x = np.hstack([np.reshape(x1, (-1, 1)), np.reshape(x2, (-1, 1))])
-    data = TaskData(X=x, column_names=["x1", "x2"], column_types=[0, 0])
+    data = TaskData(
+        X=x,
+        column_names=["x1", "x2"],
+        column_types=[ColumnType(VarType.NUM), ColumnType(VarType.NUM)],
+    )
 
     task = OneHot()
     res = task.fit_transform(data)
@@ -73,7 +85,7 @@ def test_onehot_task():
         "x2_4",
         "x2_5",
     ]
-    assert all([x == 0 for x in res.column_types])
+    assert all([x == ColumnType(VarType.NUM) for x in res.column_types])
 
     expected = OneHotEncoder().fit_transform(data.X)
     assert np.all(np.isclose(res.X.todense(), expected.todense()))
@@ -84,7 +96,11 @@ def test_date_features_extractor_task():
     x2 = pd.date_range(start="2007-06-06", periods=5000, freq="21S")
 
     x = np.hstack([np.reshape(x1, (-1, 1)), np.reshape(x2, (-1, 1))])
-    data = TaskData(X=x, column_names=["x1", "x2"], column_types=[0, 0])
+    data = TaskData(
+        X=x,
+        column_names=["x1", "x2"],
+        column_types=[ColumnType(VarType.NUM), ColumnType(VarType.NUM)],
+    )
 
     task = DateFeatures()
     res = task.fit_transform(data)
@@ -114,3 +130,11 @@ def test_date_features_extractor_task():
             expected_val = np.array([v(x) for x in expected])
             idx = actual.column_names.index(feature_name)
             assert np.all(np.isclose(actual.X[:, idx], expected_val))
+
+            idx = actual.column_names.index(feature_name)
+            col_type = actual.column_types[idx]
+
+            if "year" in feature_name:
+                assert col_type.var_type == VarType.NUM
+            else:
+                assert col_type.var_type == VarType.CAT

@@ -21,6 +21,10 @@ test-nbeats: flake
 	py.test -vv $(FLAGS) ./tests/nbeats/
 
 
+test-pipeline: flake
+	py.test -vv $(FLAGS) ./tests/pipeline/
+
+
 mypy:
 	mypy time_series_experiments --ignore-missing-imports --disallow-untyped-calls --no-site-packages --strict
 
