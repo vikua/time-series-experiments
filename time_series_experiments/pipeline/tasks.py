@@ -1,6 +1,8 @@
 import abc
 
 import attr
+import pandas as pd
+import numpy as np
 from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
 from sklearn.base import BaseEstimator
 
@@ -65,6 +67,66 @@ class OneHot(Task):
             new_cols = ["{}_{}".format(col, i) for i in range(len(categories))]
             column_names.extend(new_cols)
         column_types = [0 for _ in column_names]
+        return attr.evolve(
+            data, X=_X, column_names=column_names, column_types=column_types
+        )
+
+
+class DateFeatures(Task):
+    COMPONENTS = [
+        "year",
+        "month",
+        "week",
+        "day_of_month",
+        "day_of_week",
+        "hour",
+        "minute",
+        "second",
+    ]
+
+    EXTRACTORS = {
+        "year": np.vectorize(lambda x: x.year),
+        "month": np.vectorize(lambda x: x.month),
+        "week": np.vectorize(lambda x: x.week),
+        "day_of_month": np.vectorize(lambda x: x.day),
+        "day_of_week": np.vectorize(lambda x: x.dayofweek),
+        "hour": np.vectorize(lambda x: x.hour),
+        "minute": np.vectorize(lambda x: x.minute),
+        "second": np.vectorize(lambda x: x.second),
+    }
+
+    PATTERN = "{} - {}"
+
+    def __init__(self, components=None):
+        if not components:
+            components = self.COMPONENTS
+
+        unknown = set(components) - set(self.COMPONENTS)
+        if unknown:
+            raise ValueError("Unknown datetime components {}".format(unknown))
+
+        self._components = components
+
+    def fit(self, data: TaskData) -> Task:
+        return self
+
+    def transform(self, data: TaskData) -> TaskData:
+        X = data.X
+        converter = np.vectorize(lambda x: pd.Timestamp(x))
+        X = converter(X)
+
+        _X = []
+        column_names = []
+        for component in self._components:
+            func = self.EXTRACTORS[component]
+            _X.append(func(X))
+            column_names.extend(
+                [self.PATTERN.format(c, component) for c in data.column_names]
+            )
+
+        _X = np.concatenate(_X, axis=1)
+        column_types = [0 for _ in column_names]
+
         return attr.evolve(
             data, X=_X, column_names=column_names, column_types=column_types
         )
