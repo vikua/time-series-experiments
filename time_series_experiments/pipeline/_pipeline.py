@@ -1,6 +1,7 @@
 from typing import List
 
 import attr
+import numpy as np
 
 from .tasks import Task
 from .data import TaskData, take_columns, combine
@@ -43,18 +44,24 @@ class Pipeline(Task):
 class ColumnsProcessor(Task):
     def __init__(self, branches: List[Step]):
         self._branches = branches
+        self._branches_fit = [False for _ in self._branches]
 
     def fit(self, data: TaskData):
-        for branch in self._branches:
+        for i, branch in enumerate(self._branches):
             branch_data = take_columns(data, branch.features, branch.types)
-            branch.task.fit(branch_data)
+            if np.prod(branch_data.X.shape) > 0:
+                self._branches_fit[i] = True
+                branch.task.fit(branch_data)
         return self
 
     def transform(self, data: TaskData) -> TaskData:
         all_outputs = []
-        for branch in self._branches:
+        for i, branch in enumerate(self._branches):
             branch_data = take_columns(data, branch.features, branch.types)
-            output = branch.task.transform(branch_data)
-            all_outputs.append(output)
+            if np.prod(branch_data.X.shape) > 0:
+                if not self._branches_fit[i]:
+                    raise ValueError("Branch {} is not fit".format(branch))
+                output = branch.task.transform(branch_data)
+                all_outputs.append(output)
 
         return combine(all_outputs)
