@@ -32,9 +32,6 @@ class Wrap(Task):
         _X = self._task.transform(data.X)
         return attr.evolve(data, X=_X)
 
-    def __str__(self):
-        return "Wrap({})".format(self._task)
-
 
 class OrdCat(Task):
     def __init__(self):
@@ -49,6 +46,3 @@ class OrdCat(Task):
         _X = self._enc.transform(data.X)
         cardinality = [len(x) for x in self._enc.categories_]
         return attr.evolve(data, X=_X, column_types=cardinality)
-
-    def __str__(self):
-        return "OrdCat({})".format(self._enc)

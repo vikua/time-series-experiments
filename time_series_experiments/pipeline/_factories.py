@@ -1,48 +1,11 @@
 from typing import Dict
 
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import (
-    OneHotEncoder,
-    StandardScaler,
-    FunctionTransformer,
-    OrdinalEncoder,
-)
+from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 
+from ._pipeline import Step, Pipeline, BranchProcessor
+from .tasks import Wrap, OrdCat
 from .dataset import VarType, DatasetConfig
-
-
-def std_one_hot_pipeline(config: DatasetConfig) -> Dict[str, VarType]:
-    features = config.feature_types
-    numeric_features = [k for k, v in features.items() if v == VarType.NUM]
-    categorical_features = [k for k, v in features.items() if v == VarType.CAT]
-
-    numeric_pipeline = Pipeline(
-        steps=[
-            ("impute", SimpleImputer(strategy="mean")),
-            ("scaler", StandardScaler()),
-        ]
-    )
-    categorical_pipeline = Pipeline(
-        steps=[
-            ("typeconvert", FunctionTransformer(lambda x: x.astype(str))),
-            (
-                "imputer",
-                SimpleImputer(
-                    strategy="constant", fill_value="missing", add_indicator=True
-                ),
-            ),
-            ("onehot", OneHotEncoder(handle_unknown="ignore")),
-        ]
-    )
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("num", numeric_pipeline, numeric_features),
-            ("cat", categorical_pipeline, categorical_features),
-        ]
-    )
-    return Pipeline(steps=[("preprocessor", preprocessor)])
 
 
 def std_ord_pipeline(config: DatasetConfig) -> Dict[str, VarType]:
@@ -52,26 +15,27 @@ def std_ord_pipeline(config: DatasetConfig) -> Dict[str, VarType]:
 
     numeric_pipeline = Pipeline(
         steps=[
-            ("impute", SimpleImputer(strategy="mean")),
-            ("scaler", StandardScaler()),
+            Step("impute", Wrap(SimpleImputer(strategy="mean"))),
+            Step("scale", Wrap(StandardScaler())),
         ]
     )
     categorical_pipeline = Pipeline(
         steps=[
-            ("typeconvert", FunctionTransformer(lambda x: x.astype(str))),
-            (
+            Step(
                 "imputer",
-                SimpleImputer(
-                    strategy="constant", fill_value="missing", add_indicator=True
+                Wrap(
+                    SimpleImputer(
+                        strategy="constant", fill_value="missing", add_indicator=True
+                    )
                 ),
             ),
-            ("encode", OrdinalEncoder()),
+            Step("encode", OrdCat()),
         ]
     )
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("num", numeric_pipeline, numeric_features),
-            ("cat", categorical_pipeline, categorical_features),
+    preprocessor = BranchProcessor(
+        branches=[
+            Step("num", numeric_pipeline, numeric_features),
+            Step("cat", categorical_pipeline, categorical_features),
         ]
     )
-    return Pipeline(steps=[("preprocessor", preprocessor)])
+    return Pipeline(steps=[Step("preprocessor", preprocessor)])

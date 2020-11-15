@@ -13,7 +13,7 @@ class Step(object):
     features: List[str] = attr.ib(default=None)
 
 
-class Pipeline(object):
+class Pipeline(Task):
     def __init__(self, steps: List[Step]):
         self._steps = steps
 
