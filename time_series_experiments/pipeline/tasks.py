@@ -35,11 +35,22 @@ class Wrap(Task):
     def transform(self, data: TaskData) -> TaskData:
         _X = self._task.transform(data.X)
 
+        column_names = data.column_names
         column_types = data.column_types
+
+        new_cols = _X.shape[1] - data.X.shape[1]
+        if new_cols != 0:
+            column_names = [
+                "{}-{}".format(type(self._task).__name__, i) for i in range(_X.shape[1])
+            ]
+            column_types = [ColumnType(VarType.NUM)] * len(column_names)
+
         if self._type_override is not None:
             column_types = [ColumnType(self._type_override) for _ in column_types]
 
-        return attr.evolve(data, X=_X, column_types=column_types)
+        return attr.evolve(
+            data, X=_X, column_types=column_types, column_names=column_names
+        )
 
 
 class OrdCat(Task):

@@ -38,6 +38,23 @@ def test_imputer_wrapper():
     assert np.isclose(np.unique(res.X[:, 0][nans])[0], np.median(x[~np.isnan(x)]))
 
 
+def test_imputer_wrapper_multiple_cols():
+    xs = []
+    for i in range(3):
+        x = np.random.random((1000, 1))
+        nans = np.random.choice(x.shape[0], size=100)
+        x[nans] = np.nan
+        xs.append(x)
+    x = np.concatenate(xs, axis=1)
+
+    data = TaskData(X=x, column_names=["x1", "x2", "x3"], column_types=[0])
+
+    task = Wrap(SimpleImputer(strategy="median", add_indicator=True))
+    res = task.fit_transform(data)
+    assert res.X.shape[1] == 6
+    assert res.column_names == ["SimpleImputer-{}".format(i) for i in range(6)]
+
+
 def test_ordcat_task():
     x1 = np.random.choice(["a", "b", "c"], size=1000)
     x2 = np.random.choice(["1", "2", "3", "4", "5", "6"], size=1000)
