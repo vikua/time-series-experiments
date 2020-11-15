@@ -1,32 +1,53 @@
-from typing import List, Dict, Any, Tuple
+from typing import List
 
-import numpy as np
-import pandas as pd
+import attr
 
 from .tasks import Task
+from .data import TaskData, take_columns, combine
+
+
+@attr.s
+class Step(object):
+    name: str = attr.ib()
+    task: Task = attr.ib()
+    features: List[str] = attr.ib(default=None)
 
 
 class Pipeline(object):
-    def __init__(self, steps: List[Task]):
+    def __init__(self, steps: List[Step]):
         self._steps = steps
 
-    def fit(
-        self, X: pd.DataFrame, y: np.ndarray = None, metadata: Dict[str, Any] = None
-    ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        metadata = metadata or {}
-        output = X
+    def fit(self, data: TaskData):
+        output = data
         for step in self._steps:
-            output, metadata = step.fit(output, y=y, metadata=metadata)
-        return output, metadata
+            output = step.task.fit_transform(output)
+        return self
 
-    def transform(self, X: pd.DataFrame) -> np.ndarray:
-        output = X
+    def transform(self, data: TaskData) -> TaskData:
+        output = data
         for step in self._steps:
-            output = step.transform(output)
+            output = step.task.transform(output)
         return output
 
-    def fit_transform(
-        self, X: pd.DataFrame, y: np.ndarray = None, metadata: Dict[str, Any] = None
-    ) -> np.ndarray:
-        self.fit(X, metadata)
-        return self.transform(X)
+    def fit_transform(self, data: TaskData) -> TaskData:
+        return self.fit(data).transform(data)
+
+
+class BranchProcessor(Task):
+    def __init__(self, branches: List[Step]):
+        self._branches = branches
+
+    def fit(self, data: TaskData):
+        for branch in self._branches:
+            branch_data = take_columns(data, branch.features)
+            branch.task.fit(branch_data)
+        return self
+
+    def transform(self, data: TaskData) -> TaskData:
+        all_outputs = []
+        for branch in self._branches:
+            branch_data = take_columns(data, branch.features)
+            output = branch.task.transform(branch_data)
+            all_outputs.append(output)
+
+        return combine(all_outputs)

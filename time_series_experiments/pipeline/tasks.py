@@ -1,18 +1,10 @@
 import abc
-from typing import Dict, Any, List
 
 import attr
-import numpy as np
 from sklearn.preprocessing import OrdinalEncoder
+from sklearn.base import BaseEstimator
 
-
-@attr.s
-class TaskData(object):
-    X: np.ndarray = attr.ib()
-    column_names: List[str] = attr.ib()
-    column_types: List[int] = attr.ib()
-    y: np.ndarray = attr.ib(default=None)
-    metadata: Dict[str, Any] = attr.ib(default={})
+from .data import TaskData
 
 
 class Task(abc.ABC):
@@ -29,7 +21,7 @@ class Task(abc.ABC):
 
 
 class Wrap(Task):
-    def __init__(self, task):
+    def __init__(self, task: BaseEstimator):
         self._task = task
 
     def fit(self, data: TaskData) -> Task:
@@ -39,6 +31,9 @@ class Wrap(Task):
     def transform(self, data: TaskData) -> TaskData:
         _X = self._task.transform(data.X)
         return attr.evolve(data, X=_X)
+
+    def __str__(self):
+        return "Wrap({})".format(self._task)
 
 
 class OrdCat(Task):
@@ -54,3 +49,6 @@ class OrdCat(Task):
         _X = self._enc.transform(data.X)
         cardinality = [len(x) for x in self._enc.categories_]
         return attr.evolve(data, X=_X, column_types=cardinality)
+
+    def __str__(self):
+        return "OrdCat({})".format(self._enc)
