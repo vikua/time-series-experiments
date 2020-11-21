@@ -18,7 +18,7 @@ class TaskMetadata(object):
 
 @attr.s
 class ColumnType(object):
-    var_type: VarType = attr.ib()
+    var_type: VarType = attr.ib(default=VarType.OBJ)
     level: int = attr.ib(default=0)
 
 
@@ -101,3 +101,28 @@ def combine(data_list: List[TaskData]) -> TaskData:
         y=y,
         metadata=metadata,
     )
+
+
+def sliding_window(arr, window_size):
+    """ Takes and arr and reshapes it into 2D matrix
+
+    Parameters
+    ----------
+    arr: np.ndarray
+        array to reshape
+    window_size: int
+        sliding window size
+
+    Returns
+    -------
+    new_arr: np.ndarray
+        2D matrix of shape (arr.shape[0] - window_size + 1, window_size)
+    """
+    (stride,) = arr.strides
+    arr = np.lib.index_tricks.as_strided(
+        arr,
+        (arr.shape[0] - window_size + 1, window_size),
+        strides=[stride, stride],
+        writeable=False,
+    )
+    return arr

@@ -3,7 +3,7 @@ import abc
 import attr
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.base import BaseEstimator
 
 from .data import TaskData, ColumnType
@@ -54,19 +54,87 @@ class Wrap(Task):
 
 
 class OrdCat(Task):
-    def __init__(self):
-        self._enc = None
+    def __init__(
+        self,
+        min_support=5,
+        use_other=True,
+        ordering="lexografical",
+        handle_unknown="missing",
+    ):
+        self._min_suppoort = min_support
+        self._use_other = use_other
+        self._ordering = ordering
+        self._handle_unknown = handle_unknown
+
+        self._missing_category = 0
+        self._other_category = 0
+        if self._use_other:
+            self._other_category = 1
+
+        if self._ordering not in ["lexografical", "frequency"]:
+            raise ValueError("Unknown value {} for ordering".format(self._ordering))
+
+        if self._handle_unknown not in ["error", "missing"]:
+            raise ValueError(
+                "Unknown value {} for handle_unknown".format(self._handle_unknown)
+            )
+
+        self.mapping_ = dict()
+        self.levels_ = dict()
 
     def fit(self, data: TaskData) -> Task:
-        self._enc = OrdinalEncoder()
-        self._enc.fit(data.X)
+        for i in range(data.X.shape[1]):
+            vals, counts = np.unique(data.X[:, i], return_counts=True)
+
+            if self._ordering == "frequency":
+                order = np.argsort(counts)
+            else:
+                order = np.argsort(vals)
+
+            vals = vals[order]
+            counts = counts[order]
+
+            categories = np.arange(vals.shape[0]) + self._other_category + 1
+
+            categories[counts < self._min_suppoort] = self._other_category
+            self.mapping_[i] = {val: cat for val, cat in zip(vals, categories)}
+
+            categories = set(list(categories) + [0] + [self._other_category])
+            self.levels_[i] = list(sorted(categories))
+
         return self
 
     def transform(self, data: TaskData) -> TaskData:
-        _X = self._enc.transform(data.X)
-        column_types = [
-            ColumnType(VarType.CAT, level=len(x)) for x in self._enc.categories_
-        ]
+        if len(self.mapping_.keys()) != data.X.shape[1]:
+            raise ValueError("Unexpected number of columns")
+
+        _X = []
+        levels = []
+        for i in range(data.X.shape[1]):
+            cats = self.mapping_[i].copy()
+            arr = data.X[:, i]
+
+            vals = np.unique(arr)
+            unknown_categories = {
+                v: self._missing_category for v in vals if v not in cats
+            }
+            if unknown_categories and self._handle_unknown == "error":
+                raise ValueError("Found unknown categories")
+
+            cats.update(unknown_categories)
+            keys = list(cats.keys())
+            values = list(cats.values())
+
+            sort_idx = np.argsort(keys)
+            idx = np.searchsorted(keys, arr, sorter=sort_idx)
+            out = np.asarray(values)[sort_idx][idx]
+
+            _X.append(out)
+            levels.append(len(self.levels_[i]))
+
+        _X = np.vstack(_X).T
+
+        column_types = [ColumnType(VarType.CAT, level=x) for x in levels]
         return attr.evolve(data, X=_X, column_types=column_types)
 
 
@@ -151,4 +219,49 @@ class DateFeatures(Task):
         _X = np.concatenate(_X, axis=1)
         return attr.evolve(
             data, X=_X, column_names=column_names, column_types=column_types
+        )
+
+
+class TargetLag(Task):
+    PATTERN = "lag_{}"
+
+    def __init__(self, order=1, handle_nan="drop"):
+        self._order = order
+        self._handle_nan = handle_nan
+
+        if self._handle_nan not in ["drop", "impute"]:
+            raise ValueError(
+                "Unknown value {} for handle_nan param".format(self._handle_nan)
+            )
+
+        self._impute_val = None
+
+    def fit(self, data: TaskData) -> Task:
+        self._impute_val = np.mean(data.y)
+        return self
+
+    def transform(self, data: TaskData) -> TaskData:
+        X = data.X
+        y = data.y
+
+        lag = np.roll(y, self._order)
+        np.put(lag, range(self._order), np.nan)
+
+        mask = np.isnan(lag)
+        if self._handle_nan == "drop":
+            X = X[~mask]
+            y = y[~mask]
+            lag = lag[~mask]
+        elif self._handle_nan == "impute":
+            lag[mask] = self._impute_val
+
+        column_names = data.column_names + [self.PATTERN.format(self._order)]
+        column_types = data.column_types + [ColumnType(VarType.LAG)]
+        lag = np.reshape(lag, (-1, 1))
+        if len(X.shape) == 1:
+            X = np.reshape(X, (-1, 1))
+        X = np.concatenate([X, lag], axis=1)
+
+        return attr.evolve(
+            data, X=X, y=y, column_names=column_names, column_types=column_types
         )

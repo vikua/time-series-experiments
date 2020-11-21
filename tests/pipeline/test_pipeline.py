@@ -104,7 +104,7 @@ def test_pipeline_cat():
                 name="impute",
                 task=Wrap(SimpleImputer(strategy="constant", fill_value="missing")),
             ),
-            Step(name="ordcat", task=OrdCat()),
+            Step(name="ordcat", task=OrdCat(min_support=0, use_other=False)),
         ]
     )
 
@@ -119,8 +119,10 @@ def test_pipeline_cat():
     ordcat = OrdinalEncoder()
     res = imputer.fit_transform(train_df.values)
     train_expected = ordcat.fit_transform(res)
+    train_expected = train_expected + 1
     res = imputer.transform(test_df.values)
     test_expected = ordcat.transform(res)
+    test_expected = test_expected + 1
 
     assert np.all(np.isclose(train_expected, train.X))
     assert np.all(np.isclose(test_expected, test.X))
@@ -293,7 +295,11 @@ def test_date_pipeline():
                         Step(
                             "num_derived", Wrap(StandardScaler()), types=[VarType.NUM]
                         ),
-                        Step("cat_derived", OrdCat(), types=[VarType.CAT]),
+                        Step(
+                            "cat_derived",
+                            OrdCat(min_support=0, use_other=False),
+                            types=[VarType.CAT],
+                        ),
                     ]
                 ),
             ),
@@ -318,6 +324,7 @@ def test_date_pipeline():
 
     num_train = scaler.fit_transform(num_train.X)
     cat_train = enc.fit_transform(cat_train.X)
+    cat_train = cat_train + 1
 
     assert np.all(np.isclose(num_train, take_columns(train, types=[VarType.NUM]).X))
     assert np.all(np.isclose(cat_train, take_columns(train, types=[VarType.CAT]).X))
@@ -326,6 +333,7 @@ def test_date_pipeline():
     cat_test = take_columns(dates_test, types=[VarType.CAT])
     num_test = scaler.transform(num_test.X)
     cat_test = enc.transform(cat_test.X)
+    cat_test = cat_test + 1
 
     assert np.all(np.isclose(num_test, take_columns(test, types=[VarType.NUM]).X))
     assert np.all(np.isclose(cat_test, take_columns(test, types=[VarType.CAT]).X))

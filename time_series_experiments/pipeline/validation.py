@@ -42,12 +42,7 @@ class Backtest(object):
 
 class BacktestingCrossVal(object):
     def __init__(
-        self,
-        data: pd.DataFrame,
-        config: DatasetConfig,
-        k: int,
-        validation_size: float,
-        shuffle_train: bool = False,
+        self, data: pd.DataFrame, config: DatasetConfig, k: int, validation_size: float,
     ):
         self._data = data
         self._config = config
@@ -69,6 +64,10 @@ class BacktestingCrossVal(object):
         end = self._data[self._config.date_col].max()
         self._backtests = compute_backtests(start, end, self._k, self._validation_size)
         return self._backtests
+
+    @property
+    def data(self) -> pd.DataFrame:
+        return self._data
 
     def __getitem__(self, i) -> Backtest:
         if i >= self._k:

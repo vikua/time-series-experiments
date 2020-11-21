@@ -1,7 +1,7 @@
 import numpy as np
 from tensorflow import keras
 
-from ..pipeline.dataset import sliding_window
+from ..pipeline.data import sliding_window
 
 
 def get_initializer(name, seed):

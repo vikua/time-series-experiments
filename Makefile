@@ -22,7 +22,7 @@ test-nbeats: flake
 
 
 test-pipeline: flake
-	py.test -vv $(FLAGS) ./tests/pipeline/
+	py.test -vv $(FLAGS) ./tests/pipeline/ ./tests/experiment/
 
 
 mypy:

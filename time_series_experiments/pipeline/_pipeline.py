@@ -41,7 +41,7 @@ class Pipeline(Task):
         return self.fit(data).transform(data)
 
 
-class ColumnsProcessor(Task):
+class ColumnsProcessor(Pipeline):
     def __init__(self, branches: List[Step]):
         self._branches = branches
         self._branches_fit = [False for _ in self._branches]
